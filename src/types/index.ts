@@ -1,7 +1,16 @@
 // === Types pour le réseau immobilier off-market ===
 
 export type UserRole = 'buyer' | 'seller' | 'admin';
-export type PropertyType = 'apartment' | 'house' | 'villa' | 'land' | 'commercial' | 'investment_building';
+export type PropertyType =
+  | 'apartment'
+  | 'apartment_ppe'
+  | 'house'
+  | 'detached_house'
+  | 'villa'
+  | 'land'
+  | 'commercial'
+  | 'investment_building'
+  | 'investment_mixed';
 export type MatchStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
 
 export interface User {
@@ -165,11 +174,15 @@ export const BONUS_OPTIONS = [
 
 export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   apartment: 'Appartement',
+  apartment_ppe: 'Appartement en PPE',
   house: 'Maison',
+  detached_house: 'Maison individuelle',
   villa: 'Villa',
   land: 'Terrain',
   commercial: 'Commercial',
-  investment_building: 'Immeuble de rendement',
+  // Clé conservée telle quelle : elle est déjà enregistrée dans la base
+  investment_building: 'Immeuble de rendement habitation',
+  investment_mixed: 'Immeuble de rendement mixte',
 };
 
 // Conservé pour rétro-compatibilité, mais préférer VAUD_COMMUNES
