@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Building2, EyeOff, KeyRound, ShieldCheck, UserCheck } from 'lucide-react';
 import { getPublicSearches } from '../lib/api';
 import type { BuyerSearch } from '../lib/api';
-import Brand, { BRAND_NAME, DISPLAY_FONT } from './Brand';
+import Brand, { BRAND_NAME, DISPLAY_FONT, SLOGAN } from './Brand';
 import SearchCard from './SearchCard';
 
 function Entry({
@@ -76,10 +76,13 @@ export default function Landing() {
       <main className="mx-auto max-w-6xl px-6 pb-20">
         {/* Accroche et les deux entrées */}
         <section className="pt-8 sm:pt-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">Projet pilote</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-cyan-400">
+            Projet pilote · Suisse romande
+          </p>
           <h1 className="mt-4 max-w-3xl text-4xl font-medium leading-[1.1] text-white sm:text-6xl" style={DISPLAY_FONT}>
             L'immobilier qui se vend <span className="italic text-cyan-400">sans annonce.</span>
           </h1>
+          <p className="mt-4 text-sm uppercase tracking-[0.2em] text-slate-400">{SLOGAN}</p>
           <p className="mt-5 max-w-2xl text-lg leading-relaxed text-slate-300">
             {BRAND_NAME} met en relation, en toute discrétion, les propriétaires et régies qui vendent hors
             marché avec des acheteurs qualifiés.
