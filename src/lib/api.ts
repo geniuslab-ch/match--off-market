@@ -154,6 +154,38 @@ export const respondContactRequest = (requestId: string, accept: boolean) =>
 // --- Tarifs ---
 export const getMyBillingTerms = () => call<BillingTerms>('get_my_billing_terms');
 
+// --- Administration : suivi des ventes ---
+export type CallOutcome = 'sold' | 'not_sold' | 'callback';
+
+interface Person {
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+/** Une mise en relation acceptée, à suivre par téléphone */
+export interface Followup {
+  id: string;
+  /** urgent = bien retiré depuis (vente probable), due = rappel atteint, later = à venir, closed = résultat connu */
+  priority: 'urgent' | 'due' | 'later' | 'closed';
+  probable_sale: boolean;
+  accepted_at: string;
+  sale_status: 'unknown' | 'sold' | 'not_sold';
+  next_call_at: string | null;
+  last_call_at: string | null;
+  call_note: string | null;
+  fee_chf: number;
+  billing_rule: BillingRule | 'pilot' | null;
+  property: { title: string; zone: string; price: number; is_active: boolean; deactivated_at: string | null };
+  seller: Person & { is_professional: boolean };
+  buyer: Person;
+}
+
+export const adminGetFollowups = () => call<Followup[]>('admin_get_followups');
+
+export const adminRecordCall = (requestId: string, outcome: CallOutcome, note: string) =>
+  call<string>('admin_record_call', { p_request_id: requestId, p_outcome: outcome, p_note: note });
+
 // --- Mon compte ---
 export const setMyProfessional = (value: boolean) =>
   call<boolean>('set_my_professional', { p_value: value });

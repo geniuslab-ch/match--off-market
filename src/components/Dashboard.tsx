@@ -1194,6 +1194,14 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
                     {user.pseudo || user.full_name}
                   </span>
                 )}
+                {user?.role === 'admin' && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-sm text-cyan-400 hover:bg-cyan-500/20"
+                  >
+                    Suivi des ventes
+                  </button>
+                )}
                 {(user || session) && (
                   <button
                     onClick={handleSignOut}
