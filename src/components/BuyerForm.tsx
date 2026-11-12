@@ -21,6 +21,7 @@ import { calculateBuyerScore } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile } from '../types';
 import CommuneSelect from './CommuneSelect';
+import MoneyInput from './MoneyInput';
 import Brand from './Brand';
 import DocumentUpload from './DocumentUpload';
 
@@ -285,6 +286,7 @@ export default function BuyerForm() {
                     <MapPin className="h-3.5 w-3.5" /> Zone souhaitée
                   </label>
                   <CommuneSelect
+                    allowCantons
                     value={criteria.desired_zone}
                     onChange={(v) => updateCriteria(index, 'desired_zone', v)}
                   />
@@ -321,15 +323,11 @@ export default function BuyerForm() {
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                     <BadgeSwissFranc className="h-3.5 w-3.5" /> Budget max (CHF)
                   </label>
-                  <input
-                    type="number"
+                  <MoneyInput
                     value={criteria.budget_max}
-                    onChange={(e) =>
-                      updateCriteria(index, 'budget_max', e.target.value)
-                    }
+                    onChange={(v) => updateCriteria(index, 'budget_max', v)}
                     placeholder="950000"
                     required
-                    min={1}
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
@@ -400,15 +398,11 @@ export default function BuyerForm() {
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                   <Landmark className="h-3.5 w-3.5" /> Apport personnel (CHF)
                 </label>
-                <input
-                  type="number"
+                <MoneyInput
                   value={financials.personal_contribution}
-                  onChange={(e) =>
-                    updateFinancial('personal_contribution', e.target.value)
-                  }
+                  onChange={(v) => updateFinancial('personal_contribution', v)}
                   placeholder="200000"
                   required
-                  min={0}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                 />
                 {(() => {

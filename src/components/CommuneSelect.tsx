@@ -1,15 +1,18 @@
 import { useState, useMemo } from 'react';
 import { MapPin } from 'lucide-react';
-import { ROMANDIE_COMMUNES } from '../data/romandieCommunes';
+import { CANTONS, ROMANDIE_COMMUNES } from '../data/romandieCommunes';
 
 // Champ de recherche d'une localité de Suisse romande.
 // Si la localité n'est pas dans la liste, on peut la saisir telle quelle.
 export default function CommuneSelect({
   value,
   onChange,
+  allowCantons = false,
 }: {
   value: string;
   onChange: (v: string) => void;
+  /** Propose aussi « tout le canton » (recherche d'acheteur), pas pour situer un bien */
+  allowCantons?: boolean;
 }) {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -19,6 +22,12 @@ export default function CommuneSelect({
     const s = search.toLowerCase();
     return ROMANDIE_COMMUNES.filter((c) => c.toLowerCase().includes(s));
   }, [search]);
+
+  const cantons = useMemo(() => {
+    if (!allowCantons) return [];
+    const s = search.toLowerCase();
+    return CANTONS.filter((c) => !s || c.label.toLowerCase().includes(s)).map((c) => c.label);
+  }, [allowCantons, search]);
 
   const typed = search.trim();
   const canUseTyped =
@@ -55,6 +64,28 @@ export default function CommuneSelect({
       </div>
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-600 bg-slate-900 shadow-xl">
+          {cantons.length > 0 && (
+            <>
+              <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Tout un canton
+              </p>
+              {cantons.map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={`w-full px-4 py-2 text-left text-sm font-medium hover:bg-slate-800 ${
+                    label === value ? 'bg-cyan-950 text-cyan-400' : 'text-slate-200'
+                  }`}
+                  onClick={() => choose(label)}
+                >
+                  {label}
+                </button>
+              ))}
+              <p className="border-t border-slate-700 px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Une localité
+              </p>
+            </>
+          )}
           {filtered.map((commune) => (
             <button
               key={commune}
@@ -76,7 +107,7 @@ export default function CommuneSelect({
               Utiliser « {typed} »
             </button>
           )}
-          {filtered.length === 0 && !canUseTyped && (
+          {filtered.length === 0 && cantons.length === 0 && !canUseTyped && (
             <div className="px-4 py-3 text-sm text-slate-500">Aucune localité trouvée</div>
           )}
         </div>

@@ -86,6 +86,8 @@ export interface Property {
   description?: string;
   property_type: PropertyType;
   zone: string;
+  /** Code du canton (VD, GE, FR, VS, NE, JU), si la localité est connue */
+  canton?: string | null;
   price: number;
   surface_m2: number;
   rooms?: number;

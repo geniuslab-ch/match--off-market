@@ -34,6 +34,7 @@ import {
 } from '../types';
 import type { PropertyType, SituationType, HouseType, CommercialType, Property } from '../types';
 import CommuneSelect from './CommuneSelect';
+import MoneyInput from './MoneyInput';
 import Brand from './Brand';
 
 export default function SellerForm() {
@@ -356,13 +357,11 @@ export default function SellerForm() {
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                   <BadgeSwissFranc className="h-3.5 w-3.5" /> Prix (CHF)
                 </label>
-                <input
-                  type="number"
+                <MoneyInput
                   value={form.price}
-                  onChange={(e) => update('price', e.target.value)}
+                  onChange={(v) => update('price', v)}
                   placeholder="890000"
                   required
-                  min={1}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                 />
               </div>

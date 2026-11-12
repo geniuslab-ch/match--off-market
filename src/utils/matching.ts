@@ -1,3 +1,4 @@
+import { cantonOfCommune, cantonOfZone } from '../data/romandieCommunes';
 import type { BuyerProfile, Property, SearchCriteria } from '../types';
 
 // ============================================================
@@ -149,8 +150,11 @@ function calculateMatchWithCriteria(
   let matchScore = 0;
 
   // Zone OK (+20)
+  // Zone : même localité, ou localité située dans le canton recherché
+  const wantedCanton = cantonOfZone(criteria.desired_zone);
   const zoneMatch =
-    criteria.desired_zone.toLowerCase() === property.zone.toLowerCase();
+    criteria.desired_zone.toLowerCase() === property.zone.toLowerCase() ||
+    (wantedCanton !== null && cantonOfCommune(property.zone) === wantedCanton);
   if (zoneMatch) matchScore += 20;
 
   // Prix <= Budget (+30)
