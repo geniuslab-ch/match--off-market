@@ -229,7 +229,19 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
 
       <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
         <ScoreBar value={buyer.budget_max > 0 ? 40 : 0} max={40} label="Budget renseigné" />
-        <ScoreBar value={parseFloat(contributionPct) >= 20 ? 20 : 0} max={20} label={`Apport (${contributionPct} %)`} />
+        {(() => {
+          // L'apport est évalué recherche par recherche : on affiche la fourchette
+          const pcts = criteria
+            .map((c) => (Number(c.budget_max) > 0 ? (buyer.personal_contribution / Number(c.budget_max)) * 100 : 0))
+            .filter((x) => x > 0);
+          const lo = pcts.length ? Math.min(...pcts) : parseFloat(contributionPct);
+          const hi = pcts.length ? Math.max(...pcts) : parseFloat(contributionPct);
+          const label =
+            pcts.length > 1 && Math.round(lo) !== Math.round(hi)
+              ? `Apport (${Math.round(lo)} à ${Math.round(hi)} % selon la recherche)`
+              : `Apport (${Math.round(hi)} %)`;
+          return <ScoreBar value={hi >= 20 ? 20 : 0} max={20} label={label} />;
+        })()}
         <ScoreBar value={buyer.has_pre_approval ? 30 : 0} max={30} label="Pré-approbation bancaire" />
         <ScoreBar value={buyer.debt_ratio <= 33 ? 10 : 0} max={10} label={`Endettement (${buyer.debt_ratio} %)`} />
       </div>
@@ -245,6 +257,15 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
               <div>
                 <p className="text-slate-400">Budget max</p>
                 <p className="font-semibold text-slate-100">{chf(c.budget_max)}</p>
+                {Number(c.budget_max) > 0 && (
+                  <p
+                    className={
+                      buyer.personal_contribution / Number(c.budget_max) >= 0.2 ? 'text-emerald-400' : 'text-amber-300'
+                    }
+                  >
+                    apport {Math.round((buyer.personal_contribution / Number(c.budget_max)) * 100)} %
+                  </p>
+                )}
               </div>
               <div>
                 <p className="text-slate-400">Type</p>
