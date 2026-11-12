@@ -12,7 +12,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo (même limite que le stockage Supabase)
 const ACCEPTED_TYPE = 'application/pdf';
 
 interface DocumentUploadProps {
@@ -42,7 +42,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
 
     // Validation taille
     if (file.size > MAX_FILE_SIZE) {
-      setError(`Le fichier dépasse la taille maximale de 5 Mo (${(file.size / 1024 / 1024).toFixed(1)} Mo).`);
+      setError(`Le fichier dépasse la taille maximale de 10 Mo (${(file.size / 1024 / 1024).toFixed(1)} Mo).`);
       return;
     }
 
@@ -72,7 +72,11 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
         });
 
       if (uploadError) {
-        setError(`Erreur d'upload : ${uploadError.message}`);
+        setError(
+          /bucket not found/i.test(uploadError.message)
+            ? "L'espace de stockage des documents n'est pas encore créé : exécutez la dernière version de supabase_pilote.sql dans Supabase."
+            : `Erreur d'envoi : ${uploadError.message}`,
+        );
         return;
       }
 
@@ -193,7 +197,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
                 <FileText className="h-3.5 w-3.5" /> PDF uniquement
               </span>
               <span>&bull;</span>
-              <span>5 Mo max</span>
+              <span>10 Mo max</span>
             </div>
           </>
         )}

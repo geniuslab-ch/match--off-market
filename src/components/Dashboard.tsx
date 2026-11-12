@@ -208,6 +208,16 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-lg font-semibold text-slate-100">Votre profil acheteur</h2>
         <div className="flex items-center gap-3">
+          {onEdit && qualified && buyer.share_search !== false && (
+            <a
+              href={`/recherche/${buyer.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-slate-400 hover:text-cyan-400 hover:underline"
+            >
+              Voir ma recherche comme un vendeur
+            </a>
+          )}
           {onEdit && (
             <button onClick={onEdit} className="text-sm text-cyan-400 hover:underline">
               Mettre à jour
@@ -292,12 +302,15 @@ function MatchCard({
   onRespond,
   busy,
   demo,
+  preview,
 }: {
   data: CardData;
   onRequest?: () => void;
   onRespond?: (accept: boolean) => void;
   busy?: boolean;
   demo?: boolean;
+  /** Aperçu par le vendeur : pas de score de matching, bouton inactif */
+  preview?: boolean;
 }) {
   const { property, matchScore, sellerScore, details, requestStatus, initiatedBy, contact, sellerType } = data;
 
@@ -305,9 +318,11 @@ function MatchCard({
     <div className="flex flex-col rounded-2xl border border-slate-700 bg-slate-800 shadow-lg shadow-cyan-500/5 transition-all hover:border-cyan-500/50 hover:shadow-cyan-500/10">
       <div className="relative flex h-40 items-center justify-center rounded-t-2xl bg-gradient-to-br from-cyan-950 to-slate-800">
         <Home className="h-12 w-12 text-cyan-700" />
-        <div className="absolute right-3 top-3 rounded-full bg-slate-900/90 px-3 py-1 text-sm font-bold text-cyan-400 shadow-sm backdrop-blur-sm">
-          {matchScore}/100
-        </div>
+        {!preview && (
+          <div className="absolute right-3 top-3 rounded-full bg-slate-900/90 px-3 py-1 text-sm font-bold text-cyan-400 shadow-sm backdrop-blur-sm">
+            {matchScore}/100
+          </div>
+        )}
         <div className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-cyan-500 to-cyan-600 px-2.5 py-1 text-xs font-medium text-slate-950">
           Off-market
         </div>
@@ -338,12 +353,18 @@ function MatchCard({
           </span>
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <CriteriaBadge ok={details.zone} label="Zone" />
-          <CriteriaBadge ok={details.price} label="Prix" />
-          <CriteriaBadge ok={details.type} label="Type" />
-          <CriteriaBadge ok={details.surface} label="Surface" />
-        </div>
+        {preview ? (
+          <p className="text-xs text-slate-500">
+            Ici, l'acheteur voit son score de matching et les critères qui correspondent à sa recherche.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            <CriteriaBadge ok={details.zone} label="Zone" />
+            <CriteriaBadge ok={details.price} label="Prix" />
+            <CriteriaBadge ok={details.type} label="Type" />
+            <CriteriaBadge ok={details.surface} label="Surface" />
+          </div>
+        )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
@@ -395,11 +416,15 @@ function MatchCard({
           ) : (
             <button
               onClick={onRequest}
-              disabled={busy || demo}
+              disabled={busy || demo || preview}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 hover:from-cyan-400 hover:to-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Handshake className="h-4 w-4" />
-              {demo ? 'Disponible après inscription' : busy ? 'Envoi...' : 'Demander une mise en relation'}
+              {demo
+                ? 'Disponible après inscription'
+                : busy
+                  ? 'Envoi...'
+                  : 'Demander une mise en relation'}
             </button>
           )}
         </div>
@@ -728,6 +753,7 @@ function SellerView() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [terms, setTerms] = useState<BillingTerms | null>(null);
   // Action en attente de confirmation : accepter une demande ou proposer un bien
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<
     | { kind: 'accept'; id: string; title: string }
     | { kind: 'propose'; id: string; propertyId: string; searchId: string; title: string }
@@ -789,6 +815,55 @@ function SellerView() {
   return (
     <>
       {error && <ErrorBox message={error} />}
+
+      {previewId &&
+        (() => {
+          const item = properties.find((x) => x.property.id === previewId);
+          if (!item) return null;
+          return (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/85 p-4"
+              onClick={() => setPreviewId(null)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="titre-apercu"
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm"
+              >
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 id="titre-apercu" className="text-sm font-semibold text-slate-200">
+                    Votre bien vu par un acheteur
+                  </h3>
+                  <button
+                    onClick={() => setPreviewId(null)}
+                    className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
+                  >
+                    Fermer
+                  </button>
+                </div>
+                <MatchCard
+                  preview
+                  data={{
+                    property: item.property,
+                    sellerType: isPro ? 'professional' : 'owner',
+                    matchScore: 0,
+                    sellerScore: item.seller_score,
+                    details: { zone: true, price: true, type: true, surface: true },
+                    requestStatus: null,
+                    initiatedBy: null,
+                    contact: null,
+                  }}
+                />
+                <p className="mt-3 text-xs leading-relaxed text-slate-400">
+                  Seuls les acheteurs qualifiés dont la recherche correspond voient ce bien. Votre nom et vos
+                  coordonnées restent masqués jusqu'à la mise en relation.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
 
       {confirm && (
         <ConfirmDialog
@@ -1035,6 +1110,12 @@ function SellerView() {
                       {pending_requests} en attente
                     </span>
                   )}
+                  <button
+                    onClick={() => setPreviewId(p.id)}
+                    className="flex items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-2 text-sm text-cyan-400 hover:bg-cyan-950"
+                  >
+                    <Eye className="h-4 w-4" /> Aperçu
+                  </button>
                   <button
                     disabled={busyId === p.id}
                     onClick={() => run(p.id, () => setPropertyActive(p.id, !p.is_active))}

@@ -32,6 +32,8 @@ export interface BuyerProfile {
   id: string;
   user_id: string;
   // Critères de recherche multiples
+  /** Recherche visible, anonymisée, par les vendeurs */
+  share_search?: boolean;
   search_criteria: SearchCriteria[];
   // Anciens champs conservés pour rétro-compatibilité lecture
   desired_zone: string;
