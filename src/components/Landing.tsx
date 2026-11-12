@@ -165,8 +165,8 @@ export default function Landing() {
             <ShieldCheck className="h-5 w-5 text-cyan-400" />
             <p className="mt-3 font-semibold text-slate-100">Des acheteurs qualifiés</p>
             <p className="mt-1 text-sm leading-relaxed text-slate-400">
-              Chaque acheteur est noté sur son apport, sa pré-approbation bancaire et son endettement. En dessous
-              de 80 points sur 100, il n'accède à aucun bien.
+              Chaque acheteur est noté sur son apport, sa pré-approbation bancaire et son endettement. Tous ceux
+              qui accèdent aux biens ont déclaré une pré-approbation bancaire.
             </p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
@@ -176,6 +176,35 @@ export default function Landing() {
               Ni le vendeur ni l'acheteur ne voient les coordonnées de l'autre avant d'avoir accepté la mise en
               relation.
             </p>
+          </div>
+        </section>
+
+        {/* Tarifs */}
+        <section className="mt-16">
+          <h2 className="text-2xl font-medium text-white sm:text-3xl" style={DISPLAY_FONT}>
+            Tarifs
+          </h2>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+            Le réseau est <span className="font-semibold text-cyan-400">gratuit pendant le projet pilote</span>. Il
+            deviendra payant pour les vendeurs à partir du 1er janvier 2027.
+          </p>
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="font-semibold text-slate-100">Acheteurs</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-400">Gratuit, aujourd'hui comme après le pilote.</p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="font-semibold text-slate-100">Propriétaire d'un seul bien</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                Dès 2027, un forfait dû uniquement si le bien est vendu grâce au réseau.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <p className="font-semibold text-slate-100">Régies et courtiers</p>
+              <p className="mt-1 text-sm leading-relaxed text-slate-400">
+                Dès 2027, un abonnement mensuel ou un tarif par mise en relation acceptée.
+              </p>
+            </div>
           </div>
         </section>
 
