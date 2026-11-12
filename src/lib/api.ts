@@ -11,6 +11,20 @@ import type { Property, PropertyType } from '../types';
 export type RequestStatus = 'pending' | 'accepted' | 'declined';
 export type Initiator = 'buyer' | 'seller';
 
+export type BillingRule = 'per_contact' | 'subscription' | 'owner_success';
+
+/** Conditions tarifaires du vendeur connecté, calculées par la base (montants hors TVA) */
+export interface BillingTerms {
+  pilot: boolean;
+  rule: BillingRule;
+  fee_chf: number;
+  active_properties: number;
+  per_contact_chf: number;
+  subscription_chf: number;
+  subscription_above: number;
+  owner_success_chf: number;
+}
+
 export interface Contact {
   full_name: string | null;
   email: string | null;
@@ -57,6 +71,9 @@ export interface ContactRequest {
   property_title: string;
   status: RequestStatus;
   initiated_by: Initiator;
+  /** Montant dû par le vendeur pour cette mise en relation, hors TVA */
+  fee_chf?: number;
+  billing_rule?: BillingRule | 'pilot' | null;
   match_score: number;
   created_at: string;
   buyer_pseudo: string | null;
@@ -84,7 +101,14 @@ export interface BuyerSearch {
 /** La même recherche vue par un vendeur connecté, avec ses biens qui correspondent */
 export interface SellerSearch extends BuyerSearch {
   buyer_score: number;
-  my_properties: { id: string; title: string; match_score: number; request_status: RequestStatus | null }[];
+  my_properties: {
+    id: string;
+    title: string;
+    match_score: number;
+    /** false = le bien correspond, mais dans une autre localité que celle recherchée */
+    zone_match?: boolean;
+    request_status: RequestStatus | null;
+  }[];
 }
 
 const NOT_INSTALLED =
@@ -126,6 +150,9 @@ export async function setPropertyActive(propertyId: string, isActive: boolean): 
 // --- Les deux : répondre à une demande ou à une proposition ---
 export const respondContactRequest = (requestId: string, accept: boolean) =>
   call<RequestStatus>('respond_contact_request', { p_request_id: requestId, p_accept: accept });
+
+// --- Tarifs ---
+export const getMyBillingTerms = () => call<BillingTerms>('get_my_billing_terms');
 
 // --- Mon compte ---
 export const setMyProfessional = (value: boolean) =>

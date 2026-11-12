@@ -196,17 +196,21 @@ export default function Landing() {
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <p className="font-semibold text-slate-100">Propriétaire d'un seul bien</p>
-              <p className="mt-2 text-2xl font-medium text-white" style={DISPLAY_FONT}>3 000 CHF</p>
+              <p className="mt-2 text-2xl font-medium text-white" style={DISPLAY_FONT}>
+                3 000 CHF <span className="text-sm text-slate-400">hors TVA</span>
+              </p>
               <p className="mt-1 text-sm leading-relaxed text-slate-400">
                 Dès 2027, forfait dû uniquement si le bien est vendu grâce au réseau.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <p className="font-semibold text-slate-100">Régies et courtiers</p>
-              <p className="mt-2 text-2xl font-medium text-white" style={DISPLAY_FONT}>150 CHF</p>
+              <p className="mt-2 text-2xl font-medium text-white" style={DISPLAY_FONT}>
+                150 CHF <span className="text-sm text-slate-400">hors TVA</span>
+              </p>
               <p className="mt-1 text-sm leading-relaxed text-slate-400">
                 Dès 2027, par mise en relation acceptée, jusqu'à 8 biens dans le réseau. Au-delà de 8 biens,
-                abonnement de 300 CHF par mois.
+                abonnement de 300 CHF hors TVA par mois.
               </p>
             </div>
           </div>

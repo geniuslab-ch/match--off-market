@@ -33,6 +33,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import {
   getBuyerSearches,
+  getMyBillingTerms,
   getMyContactRequests,
   getMyMatches,
   getMyProperties,
@@ -43,6 +44,7 @@ import {
   setPropertyActive,
 } from '../lib/api';
 import type {
+  BillingTerms,
   Contact,
   ContactRequest,
   Initiator,
@@ -499,6 +501,7 @@ function BuyerView() {
   }
 
   const shown = sellerFilter === 'all' ? matches : matches.filter((m) => m.seller_type === sellerFilter);
+  const exactCount = matches.filter((m) => m.details.zone).length;
 
   return (
     <>
@@ -509,7 +512,7 @@ function BuyerView() {
         <h2 className="text-lg font-semibold text-slate-100">Vos matchs</h2>
         <p className="mb-4 text-sm text-slate-400">
           {qualified
-            ? `${matches.length} bien${matches.length > 1 ? 's' : ''} correspond${matches.length > 1 ? 'ent' : ''} à votre recherche.`
+            ? `${exactCount} bien${exactCount > 1 ? 's' : ''} dans votre zone${matches.length > exactCount ? `, ${matches.length - exactCount} hors zone` : ''}.`
             : 'Les biens sont accessibles à partir de 80 points.'}
         </p>
 
@@ -550,8 +553,29 @@ function BuyerView() {
               Aucun bien de ce type parmi vos matchs.
             </p>
           )}
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {shown.map((m) => (
+          {[
+            {
+              key: 'exact',
+              title: 'Matching exact',
+              help: 'Dans la localité que vous recherchez.',
+              list: shown.filter((m) => m.details.zone),
+            },
+            {
+              key: 'hors-zone',
+              title: 'Matching hors zone',
+              help: 'Ces biens correspondent à votre recherche, mais se trouvent dans une autre localité.',
+              list: shown.filter((m) => !m.details.zone),
+            },
+          ]
+            .filter((group) => group.list.length > 0)
+            .map((group) => (
+              <div key={group.key} className="mb-8">
+                <h3 className="text-base font-semibold text-slate-100">
+                  {group.title} <span className="font-normal text-slate-500">({group.list.length})</span>
+                </h3>
+                <p className="mb-3 text-sm text-slate-400">{group.help}</p>
+                <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                  {group.list.map((m) => (
               <MatchCard
                 key={m.property.id}
                 data={{
@@ -568,12 +592,113 @@ function BuyerView() {
                 onRequest={() => handleRequest(m.property.id)}
                 onRespond={(accept) => handleRespond(m.property.id, m.request_id, accept)}
               />
+                  ))}
+                </div>
+              </div>
             ))}
-          </div>
           </>
         )}
       </section>
     </>
+  );
+}
+
+// ============================================================
+// Tarifs : ce qu'une mise en relation acceptée coûte au vendeur
+// ============================================================
+const money = (n: number) => `${Number(n).toLocaleString('fr-CH')} CHF hors TVA`;
+
+/** Phrases affichées au vendeur avant qu'il accepte ou propose. `terms` vaut null si la base ne les fournit pas. */
+function billingLines(terms: BillingTerms | null): string[] {
+  if (!terms) return ['Gratuit pendant le projet pilote.'];
+  const later = {
+    per_contact: `${money(terms.per_contact_chf)} par mise en relation acceptée.`,
+    subscription: `inclus dans votre abonnement de ${money(terms.subscription_chf)} par mois (plus de ${terms.subscription_above} biens actifs).`,
+    owner_success: `aucun frais à la mise en relation ; ${money(terms.owner_success_chf)} uniquement si le bien est vendu grâce au réseau.`,
+  }[terms.rule];
+  if (terms.pilot) {
+    return ['Gratuit pendant le projet pilote, jusqu\'au 31 décembre 2026.', `À partir du 1er janvier 2027 : ${later}`];
+  }
+  if (terms.rule === 'per_contact') return [`Cette mise en relation vous sera facturée ${money(terms.fee_chf)}.`];
+  if (terms.rule === 'subscription') {
+    return [`Cette mise en relation est incluse dans votre abonnement de ${money(terms.subscription_chf)} par mois.`];
+  }
+  return [
+    'Aucun frais pour cette mise en relation.',
+    `${money(terms.owner_success_chf)} seront dus uniquement si le bien est vendu grâce au réseau.`,
+  ];
+}
+
+function billingNote(r: ContactRequest): string | null {
+  if (r.status !== 'accepted' || !r.billing_rule) return null;
+  if (r.billing_rule === 'pilot') return 'Gratuit (projet pilote)';
+  if (r.billing_rule === 'per_contact') return `Facturé ${money(r.fee_chf ?? 0)}`;
+  if (r.billing_rule === 'subscription') return 'Inclus dans votre abonnement';
+  return 'Aucun frais à la mise en relation';
+}
+
+function ConfirmDialog({
+  title,
+  lines,
+  confirmLabel,
+  busy,
+  onConfirm,
+  onCancel,
+}: {
+  title: string;
+  lines: string[];
+  confirmLabel: string;
+  busy: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onCancel]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4"
+      onClick={onCancel}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titre-confirmation"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+      >
+        <h3 id="titre-confirmation" className="text-lg font-semibold text-slate-100">{title}</h3>
+        <div className="mt-4 space-y-2 rounded-xl bg-slate-800 p-4 text-sm leading-relaxed text-slate-200">
+          {lines.map((line, i) => (
+            <p key={i} className={i === 0 ? 'font-semibold text-cyan-300' : 'text-slate-300'}>{line}</p>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Les coordonnées sont échangées dès que les deux parties ont accepté.
+        </p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
+          >
+            Annuler
+          </button>
+          <button
+            autoFocus
+            disabled={busy}
+            onClick={onConfirm}
+            className="rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -601,6 +726,13 @@ function SellerView() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [terms, setTerms] = useState<BillingTerms | null>(null);
+  // Action en attente de confirmation : accepter une demande ou proposer un bien
+  const [confirm, setConfirm] = useState<
+    | { kind: 'accept'; id: string; title: string }
+    | { kind: 'propose'; id: string; propertyId: string; searchId: string; title: string }
+    | null
+  >(null);
 
   async function copyLink(searchId: string) {
     const link = `${window.location.origin}/recherche/${searchId}`;
@@ -624,6 +756,8 @@ function SellerView() {
       setProperties(props);
       setRequests(reqs);
       setSearches(srch);
+      // Conditions tarifaires : si la base ne les fournit pas encore, on affiche le texte du pilote
+      getMyBillingTerms().then(setTerms).catch(() => setTerms(null));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur de chargement.');
     } finally {
@@ -655,6 +789,30 @@ function SellerView() {
   return (
     <>
       {error && <ErrorBox message={error} />}
+
+      {confirm && (
+        <ConfirmDialog
+          title={
+            confirm.kind === 'accept'
+              ? `Accepter la mise en relation pour « ${confirm.title} » ?`
+              : `Proposer « ${confirm.title} » à cet acheteur ?`
+          }
+          lines={
+            confirm.kind === 'accept'
+              ? billingLines(terms)
+              : ["Si l'acheteur accepte, la mise en relation est établie.", ...billingLines(terms)]
+          }
+          confirmLabel={confirm.kind === 'accept' ? 'Confirmer et accepter' : 'Confirmer et proposer'}
+          busy={busyId === confirm.id}
+          onCancel={() => setConfirm(null)}
+          onConfirm={() => {
+            const c = confirm;
+            run(c.id, () =>
+              c.kind === 'accept' ? respondContactRequest(c.id, true) : proposeProperty(c.propertyId, c.searchId),
+            ).finally(() => setConfirm(null));
+          }}
+        />
+      )}
 
       <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-700 bg-slate-800 p-4">
         <input
@@ -709,6 +867,7 @@ function SellerView() {
                     <p className="mt-1 text-xs text-slate-500">
                       {r.initiated_by === 'seller' ? 'Proposée par vous le ' : 'Demande reçue le '}
                       {new Date(r.created_at).toLocaleDateString('fr-CH')}
+                      {billingNote(r) ? ` · ${billingNote(r)}` : ''}
                     </p>
                   </div>
 
@@ -728,7 +887,7 @@ function SellerView() {
                       </button>
                       <button
                         disabled={busyId === r.id}
-                        onClick={() => run(r.id, () => respondContactRequest(r.id, true))}
+                        onClick={() => setConfirm({ kind: 'accept', id: r.id, title: r.property_title })}
                         className="rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
                       >
                         Accepter
@@ -779,12 +938,23 @@ function SellerView() {
                       <div key={mp.id} className="flex items-center justify-between gap-3 rounded-lg bg-slate-900 px-3 py-2">
                         <span className="min-w-0 text-sm">
                           <span className="block truncate text-slate-200">{mp.title}</span>
-                          <span className="text-xs text-slate-500">Matching {mp.match_score}/100</span>
+                          <span className="text-xs text-slate-500">
+                            Matching {mp.match_score}/100
+                            {mp.zone_match === false && <span className="text-amber-300"> · hors zone</span>}
+                          </span>
                         </span>
                         {mp.request_status === null ? (
                           <button
                             disabled={busyId === `${s.id}:${mp.id}`}
-                            onClick={() => run(`${s.id}:${mp.id}`, () => proposeProperty(mp.id, s.id))}
+                            onClick={() =>
+                              setConfirm({
+                                kind: 'propose',
+                                id: `${s.id}:${mp.id}`,
+                                propertyId: mp.id,
+                                searchId: s.id,
+                                title: mp.title,
+                              })
+                            }
                             className="shrink-0 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-3 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
                           >
                             Proposer ce bien
