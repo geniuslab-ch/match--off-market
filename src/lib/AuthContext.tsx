@@ -12,7 +12,14 @@ interface AuthState {
   session: Session | null;
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, pseudo: string, role: UserRole) => Promise<SignUpResult>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    pseudo: string,
+    role: UserRole,
+    isProfessional?: boolean
+  ) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
@@ -58,30 +65,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Pattern Supabase v2 : utiliser onAuthStateChange comme source unique de vérité
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
+      (event, s) => {
         // Si un signup/signin est en cours, ne pas interférer
         if (authActionInProgress.current) return;
 
-        if (event === 'SIGNED_OUT') {
+        if (event === 'SIGNED_OUT' || !s) {
           setSession(null);
           setUser(null);
           setLoading(false);
           return;
         }
 
-        if (s) {
-          setSession(s);
-          const u = await fetchUser(s.user.id);
+        setSession(s);
+        // Important : ne jamais attendre un appel Supabase à l'intérieur de ce rappel.
+        // supabase-js le déconseille (blocage interne) : au rechargement de la page,
+        // la fiche utilisateur ne se chargeait pas. On diffère donc la lecture.
+        setTimeout(async () => {
+          const u = await fetchUserWithRetry(s.user.id, 2);
           setUser(u);
-        }
-        setLoading(false);
+          setLoading(false);
+        }, 0);
       }
     );
 
     // Fallback : si onAuthStateChange ne fire pas dans les 3s, débloquer l'app
     const timeout = setTimeout(() => {
       setLoading(false);
-    }, 3000);
+    }, 5000);
 
     return () => {
       subscription.unsubscribe();
@@ -95,7 +105,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     password: string,
     fullName: string,
     pseudo: string,
-    role: UserRole
+    role: UserRole,
+    isProfessional = false
   ): Promise<SignUpResult> {
     if (!supabase) return { error: 'Supabase non configuré', hasSession: false };
 
@@ -110,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             full_name: fullName,
             pseudo,
             role,
+            is_professional: isProfessional,
           },
         },
       });

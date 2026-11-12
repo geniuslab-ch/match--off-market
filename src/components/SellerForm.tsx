@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield,
   BadgeSwissFranc,
   Home,
   Ruler,
@@ -35,6 +34,7 @@ import {
 } from '../types';
 import type { PropertyType, SituationType, HouseType, CommercialType, Property } from '../types';
 import CommuneSelect from './CommuneSelect';
+import Brand from './Brand';
 
 export default function SellerForm() {
   const { user } = useAuth();
@@ -184,12 +184,7 @@ export default function SellerForm() {
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400">
             <ArrowLeft className="h-4 w-4" /> Retour
           </button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-cyan-500" />
-            <span className="text-sm font-bold text-slate-200">
-              <span className="text-cyan-400">off</span>-VAUD
-            </span>
-          </div>
+          <Brand size="sm" />
         </div>
       </header>
 

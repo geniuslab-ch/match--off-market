@@ -2,7 +2,7 @@ import type { BuyerProfile, Property, SearchCriteria } from '../types';
 
 // ============================================================
 // ALGORITHME DE MATCHING - Réseau Immobilier Off-Market
-// Canton de Vaud
+// Suisse romande
 // ============================================================
 
 // === SEUILS ===

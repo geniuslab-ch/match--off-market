@@ -1,0 +1,138 @@
+// ============================================================
+// Appels aux fonctions de la base (créées par supabase_pilote.sql)
+// Fichier : src/lib/api.ts
+// ============================================================
+// Le matching est calculé dans la base : le navigateur ne reçoit que
+// les données auxquelles la personne a droit.
+
+import { supabase } from './supabase';
+import type { Property, PropertyType } from '../types';
+
+export type RequestStatus = 'pending' | 'accepted' | 'declined';
+export type Initiator = 'buyer' | 'seller';
+
+export interface Contact {
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface MatchDetails {
+  zone: boolean;
+  price: boolean;
+  type: boolean;
+  surface: boolean;
+}
+
+export interface ServerMatch {
+  property: Omit<Property, 'seller_id'>;
+  match_score: number;
+  seller_score: number;
+  /** Bien présenté par un propriétaire ou par un professionnel (régie, courtier) */
+  seller_type: 'owner' | 'professional';
+  details: MatchDetails;
+  request_id: string | null;
+  request_status: RequestStatus | null;
+  initiated_by: Initiator | null;
+  contact: Contact | null;
+}
+
+export interface MatchesResponse {
+  has_profile: boolean;
+  buyer_score: number;
+  qualified: boolean;
+  matches: ServerMatch[];
+}
+
+export interface SellerProperty {
+  property: Property;
+  seller_score: number;
+  matching_buyers: number;
+  pending_requests: number;
+}
+
+export interface ContactRequest {
+  id: string;
+  property_id: string;
+  property_title: string;
+  status: RequestStatus;
+  initiated_by: Initiator;
+  match_score: number;
+  created_at: string;
+  buyer_pseudo: string | null;
+  buyer_score: number;
+  has_pre_approval: boolean;
+  contact: Contact | null;
+}
+
+/** Un critère d'une recherche d'acheteur, anonymisé (budget arrondi) */
+export interface SearchCriterion {
+  zone: string;
+  property_type: PropertyType;
+  budget_max: number;
+  surface_min: number;
+  surface_max: number;
+}
+
+/** Recherche d'un acheteur qualifié, sans aucune donnée d'identité */
+export interface BuyerSearch {
+  id: string;
+  has_pre_approval: boolean;
+  criteria: SearchCriterion[];
+}
+
+/** La même recherche vue par un vendeur connecté, avec ses biens qui correspondent */
+export interface SellerSearch extends BuyerSearch {
+  buyer_score: number;
+  my_properties: { id: string; title: string; match_score: number; request_status: RequestStatus | null }[];
+}
+
+const NOT_INSTALLED =
+  "La base de données n'est pas encore à jour : exécutez le fichier supabase_pilote.sql dans Supabase (SQL Editor).";
+
+async function call<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
+  if (!supabase) throw new Error('Supabase non configuré.');
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) {
+    // PGRST202 = fonction introuvable : le script SQL n'a pas été exécuté
+    if (error.code === 'PGRST202' || error.code === '42883') throw new Error(NOT_INSTALLED);
+    throw new Error(error.message);
+  }
+  return data as T;
+}
+
+// --- Acheteur ---
+export const getMyMatches = () => call<MatchesResponse>('get_my_matches');
+
+export const requestContact = (propertyId: string) =>
+  call<RequestStatus>('request_contact', { p_property_id: propertyId });
+
+// --- Vendeur / régie ---
+export const getMyProperties = () => call<SellerProperty[]>('get_my_properties');
+
+export const getMyContactRequests = () => call<ContactRequest[]>('get_my_contact_requests');
+
+export const getBuyerSearches = () => call<SellerSearch[]>('get_buyer_searches');
+
+export const proposeProperty = (propertyId: string, searchId: string) =>
+  call<RequestStatus>('propose_property', { p_property_id: propertyId, p_search_id: searchId });
+
+export async function setPropertyActive(propertyId: string, isActive: boolean): Promise<void> {
+  if (!supabase) throw new Error('Supabase non configuré.');
+  const { error } = await supabase.from('properties').update({ is_active: isActive }).eq('id', propertyId);
+  if (error) throw new Error(error.message);
+}
+
+// --- Les deux : répondre à une demande ou à une proposition ---
+export const respondContactRequest = (requestId: string, accept: boolean) =>
+  call<RequestStatus>('respond_contact_request', { p_request_id: requestId, p_accept: accept });
+
+// --- Mon compte ---
+export const setMyProfessional = (value: boolean) =>
+  call<boolean>('set_my_professional', { p_value: value });
+
+// --- Public, sans compte ---
+export const getPublicSearches = () => call<BuyerSearch[]>('get_public_searches');
+
+export const getPublicSearch = (searchId: string) =>
+  call<BuyerSearch | null>('get_public_search', { p_search_id: searchId });

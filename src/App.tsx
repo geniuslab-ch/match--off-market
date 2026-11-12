@@ -4,6 +4,8 @@ import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import BuyerForm from './components/BuyerForm';
 import SellerForm from './components/SellerForm';
+import Landing from './components/Landing';
+import SearchPreview from './components/SearchPreview';
 import type { ReactNode } from 'react';
 
 // Route protégée : redirige vers /auth si non connecté
@@ -23,8 +25,14 @@ function PublicRoute({ children }: { children: ReactNode }) {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Page d'accueil = Dashboard (mode démo si pas connecté) */}
-      <Route path="/" element={<Dashboard />} />
+      {/* Page d'accueil publique (les personnes connectées vont au tableau de bord) */}
+      <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+
+      {/* Démonstration avec des données fictives */}
+      <Route path="/demo" element={<Dashboard demo />} />
+
+      {/* Aperçu public d'une recherche d'acheteur (lien à transférer) */}
+      <Route path="/recherche/:id" element={<SearchPreview />} />
 
       {/* Auth */}
       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />

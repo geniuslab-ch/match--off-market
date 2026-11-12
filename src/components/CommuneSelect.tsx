@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
 import { MapPin } from 'lucide-react';
-import { VAUD_COMMUNES } from '../data/vaudCommunes';
+import { ROMANDIE_COMMUNES } from '../data/romandieCommunes';
 
+// Champ de recherche d'une localité de Suisse romande.
+// Si la localité n'est pas dans la liste, on peut la saisir telle quelle.
 export default function CommuneSelect({
   value,
   onChange,
@@ -13,12 +15,20 @@ export default function CommuneSelect({
   const [open, setOpen] = useState(false);
 
   const filtered = useMemo(() => {
-    if (!search) return VAUD_COMMUNES as readonly string[];
+    if (!search) return ROMANDIE_COMMUNES;
     const s = search.toLowerCase();
-    return (VAUD_COMMUNES as readonly string[]).filter((c) =>
-      c.toLowerCase().includes(s)
-    );
+    return ROMANDIE_COMMUNES.filter((c) => c.toLowerCase().includes(s));
   }, [search]);
+
+  const typed = search.trim();
+  const canUseTyped =
+    typed.length >= 2 && !ROMANDIE_COMMUNES.some((c) => c.toLowerCase() === typed.toLowerCase());
+
+  function choose(commune: string) {
+    onChange(commune);
+    setSearch('');
+    setOpen(false);
+  }
 
   return (
     <div className="relative">
@@ -38,35 +48,36 @@ export default function CommuneSelect({
             setOpen(true);
             setSearch('');
           }}
-          placeholder="Rechercher une commune..."
+          placeholder="Rechercher une localité..."
+          aria-label="Localité"
           className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
         />
       </div>
       {open && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-600 bg-slate-900 shadow-xl">
-          {filtered.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-slate-500">
-              Aucune commune trouvée
-            </div>
-          ) : (
-            filtered.map((commune) => (
-              <button
-                key={commune}
-                type="button"
-                className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-800 ${
-                  commune === value
-                    ? 'bg-cyan-950 text-cyan-400'
-                    : 'text-slate-300'
-                }`}
-                onClick={() => {
-                  onChange(commune);
-                  setSearch('');
-                  setOpen(false);
-                }}
-              >
-                {commune}
-              </button>
-            ))
+          {filtered.map((commune) => (
+            <button
+              key={commune}
+              type="button"
+              className={`w-full px-4 py-2 text-left text-sm hover:bg-slate-800 ${
+                commune === value ? 'bg-cyan-950 text-cyan-400' : 'text-slate-300'
+              }`}
+              onClick={() => choose(commune)}
+            >
+              {commune}
+            </button>
+          ))}
+          {canUseTyped && (
+            <button
+              type="button"
+              className="w-full border-t border-slate-700 px-4 py-2 text-left text-sm text-cyan-400 hover:bg-slate-800"
+              onClick={() => choose(typed)}
+            >
+              Utiliser « {typed} »
+            </button>
+          )}
+          {filtered.length === 0 && !canUseTyped && (
+            <div className="px-4 py-3 text-sm text-slate-500">Aucune localité trouvée</div>
           )}
         </div>
       )}

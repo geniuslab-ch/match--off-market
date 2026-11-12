@@ -12,6 +12,8 @@ export interface User {
   pseudo: string;
   phone?: string;
   role: UserRole;
+  /** Régie ou courtier (déclaré par la personne) */
+  is_professional?: boolean;
   created_at: string;
   updated_at: string;
 }

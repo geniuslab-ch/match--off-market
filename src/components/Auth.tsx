@@ -1,19 +1,24 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, UserCheck, Home, Eye, EyeOff, AlertCircle, Lock, CheckCircle2, Mail } from 'lucide-react';
+import { UserCheck, Building2, Eye, EyeOff, AlertCircle, Lock, Mail } from 'lucide-react';
 import { useAuth } from '../lib/AuthContext';
 import type { UserRole } from '../types';
+import Brand from './Brand';
+
+// La page d'accueil peut ouvrir directement l'inscription : /auth?mode=inscription&role=seller
+const params = () => new URLSearchParams(window.location.search);
 
 export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
 
-  const [isLogin, setIsLogin] = useState(true);
+  const [isLogin, setIsLogin] = useState(() => params().get('mode') !== 'inscription');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [pseudo, setPseudo] = useState('');
-  const [role, setRole] = useState<UserRole>('buyer');
+  const [role, setRole] = useState<UserRole>(() => (params().get('role') === 'seller' ? 'seller' : 'buyer'));
+  const [isProfessional, setIsProfessional] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +52,7 @@ export default function Auth() {
       return;
     }
 
-    const result = await signUp(email, password, fullName, pseudo, role);
+    const result = await signUp(email, password, fullName, pseudo, role, role === 'seller' && isProfessional);
     setLoading(false);
 
     if (result.error) {
@@ -66,15 +71,10 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-lg shadow-cyan-500/25">
-            <Shield className="h-8 w-8 text-slate-950" />
-          </div>
-          <h1 className="mt-4 text-2xl font-bold">
-            <span className="text-cyan-400">off</span>
-            <span className="text-slate-400">-</span>
-            <span className="text-slate-200">VAUD</span>
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">Réseau immobilier off-market exclusif</p>
+          <button type="button" onClick={() => navigate('/')} className="mx-auto block" aria-label="Retour à l'accueil">
+            <Brand size="lg" />
+          </button>
+          <p className="mt-4 text-sm text-slate-500">Réseau immobilier off-market</p>
         </div>
 
         {/* Formulaire */}
@@ -121,7 +121,7 @@ export default function Auth() {
                   type="text"
                   value={pseudo}
                   onChange={(e) => setPseudo(e.target.value)}
-                  placeholder="InvestorVaud42"
+                  placeholder="Investisseur42"
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
                 <p className="mt-1 text-xs text-cyan-500/70">
@@ -192,7 +192,7 @@ export default function Auth() {
             {/* Sélection du rôle (inscription uniquement) */}
             {!isLogin && (
               <div>
-                <label className="mb-2 block text-sm text-slate-400">Votre profil</label>
+                <label className="mb-2 block text-sm text-slate-400">Par quoi commencez-vous ?</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -204,7 +204,7 @@ export default function Auth() {
                     }`}
                   >
                     <UserCheck className="h-6 w-6" />
-                    <span className="text-sm font-medium">Acheteur Solvable</span>
+                    <span className="text-sm font-medium">J'achète</span>
                   </button>
                   <button
                     type="button"
@@ -215,10 +215,29 @@ export default function Auth() {
                         : 'border-slate-600 bg-slate-900 text-slate-400 hover:border-slate-500'
                     }`}
                   >
-                    <Home className="h-6 w-6" />
-                    <span className="text-sm font-medium">Propriétaire Discret</span>
+                    <Building2 className="h-6 w-6" />
+                    <span className="text-sm font-medium">Je vends</span>
                   </button>
                 </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Un seul compte suffit : vous pourrez acheter et vendre depuis votre espace.
+                </p>
+                {role === 'seller' && (
+                  <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-600 bg-slate-900 p-3">
+                    <input
+                      type="checkbox"
+                      checked={isProfessional}
+                      onChange={(e) => setIsProfessional(e.target.checked)}
+                      className="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span className="text-sm text-slate-300">
+                      Je suis un professionnel de l'immobilier
+                      <span className="block text-xs text-slate-500">
+                        Régie ou courtier. Vos biens porteront la mention « Professionnel », sans votre nom.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </div>
             )}
 

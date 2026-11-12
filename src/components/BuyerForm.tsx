@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Shield,
   BadgeSwissFranc,
   Landmark,
   CheckCircle2,
@@ -22,6 +21,7 @@ import { calculateBuyerScore } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile } from '../types';
 import CommuneSelect from './CommuneSelect';
+import Brand from './Brand';
 import DocumentUpload from './DocumentUpload';
 
 interface CriteriaForm {
@@ -56,6 +56,8 @@ export default function BuyerForm() {
   });
 
   const [preApprovalDocPath, setPreApprovalDocPath] = useState<string | null>(null);
+  // Recherche visible, sous forme anonyme, par les vendeurs et régies du réseau
+  const [shareSearch, setShareSearch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -152,6 +154,7 @@ export default function BuyerForm() {
       pre_approval_doc_path: preApprovalDocPath || null,
       debt_ratio: Number(financials.debt_ratio),
       score: liveScore,
+      share_search: shareSearch,
       search_criteria: criteriaList.map((c) => ({
         desired_zone: c.desired_zone,
         desired_property_type: c.desired_property_type,
@@ -188,12 +191,7 @@ export default function BuyerForm() {
           >
             <ArrowLeft className="h-4 w-4" /> Retour
           </button>
-          <div className="flex items-center gap-2">
-            <Shield className="h-5 w-5 text-cyan-500" />
-            <span className="text-sm font-bold text-slate-200">
-              <span className="text-cyan-400">off</span>-VAUD
-            </span>
-          </div>
+          <Brand size="sm" />
         </div>
       </header>
 
@@ -497,6 +495,26 @@ export default function BuyerForm() {
               />
             )}
           </section>
+
+          {/* Visibilité de la recherche */}
+          <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-slate-700 bg-slate-800 p-5">
+            <input
+              type="checkbox"
+              checked={shareSearch}
+              onChange={(e) => setShareSearch(e.target.checked)}
+              className="mt-0.5 h-5 w-5 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
+            />
+            <span>
+              <span className="block text-sm font-medium text-slate-200">
+                Montrer ma recherche aux vendeurs et aux régies
+              </span>
+              <span className="mt-1 block text-xs leading-relaxed text-slate-400">
+                Ils voient uniquement la zone, le type de bien, la surface et un budget arrondi. Jamais votre nom,
+                votre pseudo ni votre apport. Ils peuvent ainsi vous proposer un bien qui n'est pas encore dans le
+                réseau.
+              </span>
+            </span>
+          </label>
 
           {/* Submit */}
           <button
