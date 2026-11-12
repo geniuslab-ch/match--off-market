@@ -7,6 +7,7 @@ import SellerForm from './components/SellerForm';
 import Landing from './components/Landing';
 import SearchPreview from './components/SearchPreview';
 import Admin from './components/Admin';
+import Privacy from './components/Privacy';
 import type { ReactNode } from 'react';
 
 // Route protégée : redirige vers /auth si non connecté
@@ -45,6 +46,9 @@ function AppRoutes() {
 
       {/* Dashboard connecté */}
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+
+      {/* Déclaration de confidentialité (publique) */}
+      <Route path="/confidentialite" element={<Privacy />} />
 
       {/* Administration : suivi des ventes (la base refuse l'accès aux non-administrateurs) */}
       <Route path="/admin" element={<PrivateRoute><Admin /></PrivateRoute>} />

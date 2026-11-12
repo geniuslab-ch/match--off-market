@@ -253,6 +253,15 @@ export default function Auth() {
                   ? 'Se connecter'
                   : 'Créer mon compte'}
             </button>
+            {!isLogin && (
+              <p className="text-center text-xs leading-relaxed text-slate-500">
+                En créant un compte, vous confirmez avoir lu la{' '}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
+                  déclaration de confidentialité
+                </a>
+                .
+              </p>
+            )}
           </form>
 
           {/* Toggle login/signup */}

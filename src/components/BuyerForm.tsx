@@ -554,10 +554,19 @@ export default function BuyerForm() {
 
             {/* Upload document pré-approbation */}
             {financials.has_pre_approval && (
+              <div>
+              <p className="mb-2 text-xs leading-relaxed text-slate-400">
+                Facultatif. Le document n'est jamais montré aux vendeurs : seuls vous et l'administration d'Offly
+                pouvez l'ouvrir. Si vous déposez le document d'un client, obtenez d'abord son accord.{' '}
+                <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
+                  En savoir plus
+                </a>
+              </p>
               <DocumentUpload
                 existingPath={preApprovalDocPath || undefined}
                 onUploadComplete={(path) => setPreApprovalDocPath(path)}
               />
+              </div>
             )}
           </section>
 

@@ -228,7 +228,7 @@ export default function Landing() {
       </main>
 
       <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        {BRAND_NAME} · Réseau immobilier off-market
+        {BRAND_NAME} · Réseau immobilier off-market · <a href="/confidentialite" className="hover:text-cyan-400 hover:underline">Confidentialité</a>
       </footer>
     </div>
   );

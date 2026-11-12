@@ -1327,7 +1327,7 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-8 px-6 py-8">{content}</main>
 
       <footer className="border-t border-slate-800 bg-slate-900 py-4 text-center text-xs text-slate-500">
-        {BRAND_NAME} · Réseau immobilier off-market
+        {BRAND_NAME} · Réseau immobilier off-market · <a href="/confidentialite" className="hover:text-cyan-400 hover:underline">Confidentialité</a>
       </footer>
     </div>
   );
