@@ -183,6 +183,22 @@ export interface Followup {
 
 export const adminGetFollowups = () => call<Followup[]>('admin_get_followups');
 
+/** Une annonce vue par l'administrateur */
+export interface AdminProperty {
+  property: Property;
+  seller: Person & { is_professional: boolean };
+  pending_requests: number;
+  accepted_requests: number;
+}
+
+export const adminGetProperties = () => call<AdminProperty[]>('admin_get_properties');
+
+export const adminSetPropertyActive = (propertyId: string, active: boolean) =>
+  call<boolean>('admin_set_property_active', { p_property_id: propertyId, p_active: active });
+
+export const adminDeleteProperty = (propertyId: string) =>
+  call<boolean>('admin_delete_property', { p_property_id: propertyId });
+
 export const adminRecordCall = (requestId: string, outcome: CallOutcome, note: string) =>
   call<string>('admin_record_call', { p_request_id: requestId, p_outcome: outcome, p_note: note });
 
