@@ -6,6 +6,22 @@ import type { BuyerProfile, Property, SearchCriteria } from '../types';
 // Suisse romande
 // ============================================================
 
+// === FAMILLES DE TYPES DE BIEN ===
+// Deux types de la même famille se correspondent pour le matching.
+// Doit rester identique à private.type_family() dans supabase_pilote.sql.
+const TYPE_FAMILIES: Record<string, string> = {
+  apartment: 'apartment',
+  apartment_ppe: 'apartment',
+  house: 'house',
+  detached_house: 'house',
+  investment_building: 'investment',
+  investment_mixed: 'investment',
+};
+
+export function typeFamily(type: string): string {
+  return TYPE_FAMILIES[type] ?? type;
+}
+
 // === SEUILS ===
 const BUYER_SCORE_THRESHOLD = 80;
 const MATCH_SCORE_THRESHOLD = 70;
@@ -162,7 +178,8 @@ function calculateMatchWithCriteria(
   if (priceMatch) matchScore += 30;
 
   // Type de bien OK (+20)
-  const typeMatch = criteria.desired_property_type === property.property_type;
+  // Type : identique, ou de la même famille (appartement / PPE, maison / maison individuelle, immeubles de rendement)
+  const typeMatch = typeFamily(criteria.desired_property_type) === typeFamily(property.property_type);
   if (typeMatch) matchScore += 20;
 
   // Surface dans fourchette (+10)
