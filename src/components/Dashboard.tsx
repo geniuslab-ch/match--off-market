@@ -1111,6 +1111,12 @@ function SellerView() {
                     </span>
                   )}
                   <button
+                    onClick={() => navigate(`/seller/edit/${p.id}`)}
+                    className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
+                  >
+                    Modifier
+                  </button>
+                  <button
                     onClick={() => setPreviewId(p.id)}
                     className="flex items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-2 text-sm text-cyan-400 hover:bg-cyan-950"
                   >

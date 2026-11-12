@@ -38,31 +38,36 @@ const MATCH_SCORE_THRESHOLD = 70;
 // Seuil : 80
 // ============================================================
 
-export function calculateBuyerScore(buyer: BuyerProfile): number {
+/** Critères de recherche d'un acheteur, sous forme de liste (ancien format : un seul critère) */
+export function buyerCriteria(buyer: BuyerProfile): SearchCriteria[] {
+  return buyer.search_criteria && buyer.search_criteria.length > 0
+    ? buyer.search_criteria
+    : [{
+        desired_zone: buyer.desired_zone,
+        desired_property_type: buyer.desired_property_type,
+        budget_max: buyer.budget_max,
+        desired_surface_min_m2: buyer.desired_surface_m2 > 0 ? buyer.desired_surface_m2 - 10 : 0,
+        desired_surface_max_m2: buyer.desired_surface_m2 > 0 ? buyer.desired_surface_m2 + 10 : 0,
+      }];
+}
+
+/**
+ * Score acheteur pour UNE recherche, avec le budget de cette recherche.
+ * Budget renseigné (40) + apport >= 20 % de CE budget (20) + pré-approbation (30) + endettement <= 33 % (10).
+ * Doit rester identique à private.criterion_buyer_score() dans supabase_pilote.sql.
+ */
+export function criterionBuyerScore(buyer: BuyerProfile, budget: number): number {
   let score = 0;
-
-  // Budget suffisant (40 pts) — on considère qu'un budget > 0 est "suffisant"
-  // Le vrai check se fait au matching (prix <= budget)
-  if (buyer.budget_max > 0) {
-    score += 40;
-  }
-
-  // Apport personnel >= 20% du budget (20 pts)
-  if (buyer.budget_max > 0 && buyer.personal_contribution / buyer.budget_max >= 0.2) {
-    score += 20;
-  }
-
-  // Pré-approbation bancaire (30 pts)
-  if (buyer.has_pre_approval) {
-    score += 30;
-  }
-
-  // Taux d'endettement <= 33% (10 pts)
-  if (buyer.debt_ratio <= 33) {
-    score += 10;
-  }
-
+  if (budget > 0) score += 40;
+  if (budget > 0 && (buyer.personal_contribution || 0) / budget >= 0.2) score += 20;
+  if (buyer.has_pre_approval) score += 30;
+  if ((buyer.debt_ratio ?? 100) <= 33) score += 10;
   return score;
+}
+
+/** Score acheteur du profil : celui de sa meilleure recherche */
+export function calculateBuyerScore(buyer: BuyerProfile): number {
+  return Math.max(0, ...buyerCriteria(buyer).map((c) => criterionBuyerScore(buyer, Number(c.budget_max) || 0)));
 }
 
 export function isBuyerQualified(buyer: BuyerProfile): boolean {
@@ -210,15 +215,7 @@ export function calculateMatchScore(
   const sellerScore = calculateSellerScore(property);
 
   // Si le profil a des critères multiples, on teste chacun et on garde le meilleur
-  const criteria = buyer.search_criteria && buyer.search_criteria.length > 0
-    ? buyer.search_criteria
-    : [{
-        desired_zone: buyer.desired_zone,
-        desired_property_type: buyer.desired_property_type,
-        budget_max: buyer.budget_max,
-        desired_surface_min_m2: buyer.desired_surface_m2 > 0 ? buyer.desired_surface_m2 - 10 : 0,
-        desired_surface_max_m2: buyer.desired_surface_m2 > 0 ? buyer.desired_surface_m2 + 10 : 0,
-      }];
+  const criteria = buyerCriteria(buyer);
 
   let bestResult = {
     matchScore: 0,
@@ -227,7 +224,10 @@ export function calculateMatchScore(
   let bestCriteriaIndex = 0;
 
   for (let i = 0; i < criteria.length; i++) {
-    const result = calculateMatchWithCriteria(buyer, property, criteria[i], buyerScore, sellerScore);
+    // Chaque recherche est évaluée avec son propre budget : si l'apport ne le couvre pas, on l'ignore
+    const criterionScore = criterionBuyerScore(buyer, Number(criteria[i].budget_max) || 0);
+    if (criterionScore < BUYER_SCORE_THRESHOLD) continue;
+    const result = calculateMatchWithCriteria(buyer, property, criteria[i], criterionScore, sellerScore);
     if (result.matchScore > bestResult.matchScore) {
       bestResult = result;
       bestCriteriaIndex = i;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BadgeSwissFranc,
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
-import { calculateBuyerScore } from '../utils/matching';
+import { calculateBuyerScore, criterionBuyerScore } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile } from '../types';
 import CommuneSelect from './CommuneSelect';
@@ -62,6 +62,55 @@ export default function BuyerForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // Chargement du profil existant, pour que « Mettre à jour » reparte des données enregistrées
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    async function loadExisting() {
+      if (!supabase || !user) {
+        setLoadingProfile(false);
+        return;
+      }
+      const { data } = await supabase.from('buyer_profiles').select('*').eq('user_id', user.id).maybeSingle();
+      if (!alive) return;
+      if (data) {
+        const p = data as BuyerProfile;
+        const saved = p.search_criteria && p.search_criteria.length > 0 ? p.search_criteria : null;
+        setCriteriaList(
+          saved
+            ? saved.map((c) => ({
+                desired_zone: c.desired_zone,
+                desired_property_type: c.desired_property_type,
+                budget_max: c.budget_max ? String(c.budget_max) : '',
+                desired_surface_min_m2: c.desired_surface_min_m2 ? String(c.desired_surface_min_m2) : '',
+                desired_surface_max_m2: c.desired_surface_max_m2 ? String(c.desired_surface_max_m2) : '',
+              }))
+            : [
+                {
+                  desired_zone: p.desired_zone || 'Lausanne',
+                  desired_property_type: p.desired_property_type || 'apartment',
+                  budget_max: p.budget_max ? String(p.budget_max) : '',
+                  desired_surface_min_m2: p.desired_surface_m2 ? String(p.desired_surface_m2) : '',
+                  desired_surface_max_m2: '',
+                },
+              ],
+        );
+        setFinancials({
+          personal_contribution: p.personal_contribution != null ? String(Math.round(Number(p.personal_contribution))) : '',
+          has_pre_approval: Boolean(p.has_pre_approval),
+          debt_ratio: p.debt_ratio != null ? String(p.debt_ratio) : '',
+        });
+        setPreApprovalDocPath(p.pre_approval_doc_path || null);
+        setShareSearch(p.share_search !== false);
+      }
+      setLoadingProfile(false);
+    }
+    loadExisting();
+    return () => {
+      alive = false;
+    };
+  }, [user]);
 
   // Score en temps réel
   const liveProfile = {
@@ -70,6 +119,13 @@ export default function BuyerForm() {
     personal_contribution: Number(financials.personal_contribution) || 0,
     has_pre_approval: financials.has_pre_approval,
     debt_ratio: Number(financials.debt_ratio) || 0,
+    search_criteria: criteriaList.map((c) => ({
+      desired_zone: c.desired_zone,
+      desired_property_type: c.desired_property_type,
+      budget_max: Number(c.budget_max) || 0,
+      desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
+      desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
+    })),
   } as BuyerProfile;
   const liveScore = calculateBuyerScore(liveProfile);
 
@@ -197,6 +253,10 @@ export default function BuyerForm() {
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-8">
+        {loadingProfile ? (
+          <p className="py-20 text-center text-slate-500">Chargement de votre profil...</p>
+        ) : (
+        <>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-100">
             Profil Acheteur Solvable
@@ -226,6 +286,14 @@ export default function BuyerForm() {
                 ? 'Qualifié pour le matching'
                 : 'Seuil requis : 80/100'}
             </p>
+            {criteriaList.length > 1 && (
+              <p className="mt-1 text-xs text-slate-500">
+                Chaque recherche est évaluée avec son propre budget :{' '}
+                {criteriaList
+                  .map((c, i) => `n° ${i + 1} ${criterionBuyerScore(liveProfile, Number(c.budget_max) || 0)}/100`)
+                  .join(' · ')}
+              </p>
+            )}
           </div>
           {liveScore >= 80 && (
             <CheckCircle2 className="ml-auto h-6 w-6 text-emerald-400" />
@@ -406,23 +474,26 @@ export default function BuyerForm() {
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                 />
                 {(() => {
-                  const maxBudget = Math.max(
-                    ...criteriaList.map((c) => Number(c.budget_max) || 0)
+                  const apport = Number(financials.personal_contribution) || 0;
+                  const lines = criteriaList
+                    .map((c, i) => ({ i, budget: Number(c.budget_max) || 0, zone: c.desired_zone }))
+                    .filter((l) => l.budget > 0);
+                  if (lines.length === 0) return null;
+                  return (
+                    <ul className="mt-2 space-y-1 text-xs">
+                      {lines.map((l) => {
+                        const pct = (apport / l.budget) * 100;
+                        const ok = pct >= 20;
+                        return (
+                          <li key={l.i} className={ok ? 'text-emerald-400' : 'text-amber-300'}>
+                            Recherche {l.i + 1} ({l.zone}) : {pct.toFixed(1)} % de{' '}
+                            {l.budget.toLocaleString('fr-CH')} CHF
+                            {ok ? ' (+20 pts)' : ' (minimum 20 %)'}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   );
-                  return maxBudget > 0 ? (
-                    <p className="mt-1 text-xs text-slate-500">
-                      ={' '}
-                      {(
-                        (Number(financials.personal_contribution) / maxBudget) *
-                        100
-                      ).toFixed(1)}
-                      % du budget max
-                      {Number(financials.personal_contribution) / maxBudget >=
-                      0.2
-                        ? ' (+20 pts)'
-                        : ' (min 20% requis)'}
-                    </p>
-                  ) : null;
                 })()}
               </div>
 
@@ -525,6 +596,8 @@ export default function BuyerForm() {
             )}
           </button>
         </form>
+        </>
+        )}
       </main>
     </div>
   );

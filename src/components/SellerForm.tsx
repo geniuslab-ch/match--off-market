@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   BadgeSwissFranc,
   Home,
@@ -35,11 +35,14 @@ import {
 import type { PropertyType, SituationType, HouseType, CommercialType, Property } from '../types';
 import CommuneSelect from './CommuneSelect';
 import MoneyInput from './MoneyInput';
+import { typeFamily } from '../utils/matching';
 import Brand from './Brand';
 
 export default function SellerForm() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  // /seller/edit/:id : modification d'un bien existant ; /seller/new : nouveau bien
+  const { id: editId } = useParams();
 
   const [form, setForm] = useState({
     title: '',
@@ -66,6 +69,54 @@ export default function SellerForm() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loadingProperty, setLoadingProperty] = useState(Boolean(editId));
+
+  // En modification : on recharge le bien enregistré dans le formulaire
+  useEffect(() => {
+    if (!editId || !supabase) return;
+    let alive = true;
+    supabase
+      .from('properties')
+      .select('*')
+      .eq('id', editId)
+      .maybeSingle()
+      .then(({ data, error: err }) => {
+        if (!alive) return;
+        if (err || !data) {
+          setError("Ce bien est introuvable ou ne vous appartient pas.");
+        } else {
+          const p = data as Record<string, unknown>;
+          const str = (v: unknown) => (v === null || v === undefined ? '' : String(v));
+          setForm((prev) => ({
+            ...prev,
+            title: str(p.title),
+            description: str(p.description),
+            property_type: (p.property_type as PropertyType) || 'apartment',
+            zone: str(p.zone) || 'Lausanne',
+            price: p.price != null ? String(Math.round(Number(p.price))) : '',
+            surface_m2: str(p.surface_m2),
+            rooms: str(p.rooms),
+            floor: str(p.floor),
+            house_type: (str(p.house_type) as HouseType | ''),
+            commercial_type: (str(p.commercial_type) as CommercialType | ''),
+            situation: (str(p.situation) as SituationType | ''),
+            exterior: (p.exterior as string[] | null) ?? [],
+            parking_types: (p.parking_types as string[] | null) ?? [],
+            parking_quantity: str(p.parking_quantity) || '1',
+            bonuses: (p.bonuses as string[] | null) ?? [],
+            urgency_level: str(p.urgency_level) || '3',
+            listing_age_days: str(p.listing_age_days) || '0',
+            is_conditional_sale: Boolean(p.is_conditional_sale),
+            conditional_sale_details: str(p.conditional_sale_details),
+            rarity_score: str(p.rarity_score) || '3',
+          }));
+        }
+        setLoadingProperty(false);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [editId]);
 
   // Score vendeur en temps réel
   const liveProperty = {
@@ -133,34 +184,23 @@ export default function SellerForm() {
         score: liveScore,
       };
 
-      // Champs optionnels — seulement si renseignés
-      if (form.property_type === 'apartment' && form.floor) {
-        payload.floor = form.floor;
-      }
-      if (['house', 'villa'].includes(form.property_type) && form.house_type) {
-        payload.house_type = form.house_type;
-      }
-      if (form.property_type === 'commercial' && form.commercial_type) {
-        payload.commercial_type = form.commercial_type;
-      }
-      if (form.situation) {
-        payload.situation = form.situation;
-      }
-      if (form.exterior.length > 0) {
-        payload.exterior = form.exterior;
-      }
-      if (form.parking_types.length > 0) {
-        payload.parking_types = form.parking_types;
-        payload.parking_quantity = Number(form.parking_quantity) || 1;
-      }
-      if (form.bonuses.length > 0) {
-        payload.bonuses = form.bonuses;
-      }
-      if (form.is_conditional_sale && form.conditional_sale_details) {
-        payload.conditional_sale_details = form.conditional_sale_details;
-      }
+      // Champs optionnels : vides (null) s'ils ne s'appliquent pas, pour qu'une modification puisse les effacer
+      const family = typeFamily(form.property_type);
+      payload.floor = family === 'apartment' && form.floor ? form.floor : null;
+      payload.house_type =
+        (family === 'house' || form.property_type === 'villa') && form.house_type ? form.house_type : null;
+      payload.commercial_type = form.property_type === 'commercial' && form.commercial_type ? form.commercial_type : null;
+      payload.situation = form.situation || null;
+      payload.exterior = form.exterior.length > 0 ? form.exterior : null;
+      payload.parking_types = form.parking_types.length > 0 ? form.parking_types : null;
+      payload.parking_quantity = form.parking_types.length > 0 ? Number(form.parking_quantity) || 1 : null;
+      payload.bonuses = form.bonuses.length > 0 ? form.bonuses : null;
+      payload.conditional_sale_details =
+        form.is_conditional_sale && form.conditional_sale_details ? form.conditional_sale_details : null;
 
-      const { error: err } = await supabase.from('properties').insert(payload);
+      const { error: err } = editId
+        ? await supabase.from('properties').update(payload).eq('id', editId)
+        : await supabase.from('properties').insert(payload);
 
       if (err) {
         setError(err.message);
@@ -177,6 +217,14 @@ export default function SellerForm() {
   const urgencyLabels = ['', 'Pas pressé', 'Peu pressé', 'Modéré', 'Pressé', 'Très urgent'];
   const rarityLabels = ['', 'Courant', 'Peu courant', 'Assez rare', 'Rare', 'Exceptionnel'];
 
+  if (loadingProperty) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">
+        Chargement du bien...
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950">
       {/* Header */}
@@ -191,7 +239,9 @@ export default function SellerForm() {
 
       <main className="mx-auto max-w-3xl px-6 py-8">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-slate-100">Ajouter un bien off-market</h1>
+          <h1 className="text-2xl font-bold text-slate-100">
+            {editId ? 'Modifier mon bien' : 'Ajouter un bien off-market'}
+          </h1>
           <p className="mt-1 text-slate-400">Publiez votre bien de manière confidentielle</p>
         </div>
 
@@ -640,7 +690,7 @@ export default function SellerForm() {
                 <Loader2 className="h-4 w-4 animate-spin" /> Publication...
               </span>
             ) : (
-              'Publier mon bien off-market'
+              editId ? 'Enregistrer les modifications' : 'Publier mon bien off-market'
             )}
           </button>
         </form>

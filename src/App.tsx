@@ -41,6 +41,7 @@ function AppRoutes() {
       {/* Formulaires protégés */}
       <Route path="/buyer/new" element={<PrivateRoute><BuyerForm /></PrivateRoute>} />
       <Route path="/seller/new" element={<PrivateRoute><SellerForm /></PrivateRoute>} />
+      <Route path="/seller/edit/:id" element={<PrivateRoute><SellerForm key="edit" /></PrivateRoute>} />
 
       {/* Dashboard connecté */}
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
