@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import type { BuyerProfile, Property } from '../types';
 import { PROPERTY_TYPE_LABELS } from '../types';
-import { calculateBuyerScore, isBuyerQualified, findMatchesForBuyer } from '../utils/matching';
+import { calculateBuyerScore, isBuyerQualified, findMatchesForBuyer, searchContribution } from '../utils/matching';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import {
@@ -198,10 +198,13 @@ function CriteriaBadge({ ok, label }: { ok: boolean; label: string }) {
 function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () => void }) {
   const score = calculateBuyerScore(buyer);
   const qualified = isBuyerQualified(buyer);
-  const contributionPct = buyer.budget_max > 0
-    ? ((buyer.personal_contribution / buyer.budget_max) * 100).toFixed(1)
-    : '0';
   const criteria = buyer.search_criteria ?? [];
+  // Part de l'apport dans le budget, recherche par recherche (apport propre ou, à défaut, apport général)
+  const pctOf = (c: (typeof criteria)[number]) =>
+    Number(c.budget_max) > 0 ? (searchContribution(buyer, c) / Number(c.budget_max)) * 100 : 0;
+  const contributionPct = buyer.budget_max > 0
+    ? ((searchContribution(buyer, criteria[0]) / buyer.budget_max) * 100).toFixed(1)
+    : '0';
 
   return (
     <div className="rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-lg shadow-cyan-500/5">
@@ -232,7 +235,7 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
         {(() => {
           // L'apport est évalué recherche par recherche : on affiche la fourchette
           const pcts = criteria
-            .map((c) => (Number(c.budget_max) > 0 ? (buyer.personal_contribution / Number(c.budget_max)) * 100 : 0))
+            .map(pctOf)
             .filter((x) => x > 0);
           const lo = pcts.length ? Math.min(...pcts) : parseFloat(contributionPct);
           const hi = pcts.length ? Math.max(...pcts) : parseFloat(contributionPct);
@@ -258,12 +261,8 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                 <p className="text-slate-400">Budget max</p>
                 <p className="font-semibold text-slate-100">{chf(c.budget_max)}</p>
                 {Number(c.budget_max) > 0 && (
-                  <p
-                    className={
-                      buyer.personal_contribution / Number(c.budget_max) >= 0.2 ? 'text-emerald-400' : 'text-amber-300'
-                    }
-                  >
-                    apport {Math.round((buyer.personal_contribution / Number(c.budget_max)) * 100)} %
+                  <p className={pctOf(c) >= 20 ? 'text-emerald-400' : 'text-amber-300'}>
+                    apport {chf(searchContribution(buyer, c))} ({Math.round(pctOf(c))} %)
                   </p>
                 )}
               </div>

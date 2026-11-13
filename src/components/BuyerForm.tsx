@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
-import { calculateBuyerScore, criterionBuyerScore } from '../utils/matching';
+import { calculateBuyerScore, criterionBuyerScore, searchContribution } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile } from '../types';
 import CommuneSelect from './CommuneSelect';
@@ -31,6 +31,8 @@ interface CriteriaForm {
   budget_max: string;
   desired_surface_min_m2: string;
   desired_surface_max_m2: string;
+  /** Apport prévu pour cette recherche ; vide = apport général */
+  personal_contribution: string;
 }
 
 function newCriteria(): CriteriaForm {
@@ -40,6 +42,7 @@ function newCriteria(): CriteriaForm {
     budget_max: '',
     desired_surface_min_m2: '',
     desired_surface_max_m2: '',
+    personal_contribution: '',
   };
 }
 
@@ -85,6 +88,8 @@ export default function BuyerForm() {
                 budget_max: c.budget_max ? String(c.budget_max) : '',
                 desired_surface_min_m2: c.desired_surface_min_m2 ? String(c.desired_surface_min_m2) : '',
                 desired_surface_max_m2: c.desired_surface_max_m2 ? String(c.desired_surface_max_m2) : '',
+                personal_contribution:
+                  Number(c.personal_contribution) > 0 ? String(Math.round(Number(c.personal_contribution))) : '',
               }))
             : [
                 {
@@ -93,6 +98,7 @@ export default function BuyerForm() {
                   budget_max: p.budget_max ? String(p.budget_max) : '',
                   desired_surface_min_m2: p.desired_surface_m2 ? String(p.desired_surface_m2) : '',
                   desired_surface_max_m2: '',
+                  personal_contribution: '',
                 },
               ],
         );
@@ -125,6 +131,7 @@ export default function BuyerForm() {
       budget_max: Number(c.budget_max) || 0,
       desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
       desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
+      personal_contribution: Number(c.personal_contribution) || null,
     })),
   } as BuyerProfile;
   const liveScore = calculateBuyerScore(liveProfile);
@@ -206,7 +213,7 @@ export default function BuyerForm() {
       desired_property_type: primary.desired_property_type,
       budget_max: Number(primary.budget_max),
       desired_surface_m2: Number(primary.desired_surface_min_m2) || 0,
-      personal_contribution: Number(financials.personal_contribution),
+      personal_contribution: Number(financials.personal_contribution) || 0,
       has_pre_approval: financials.has_pre_approval,
       pre_approval_doc_path: preApprovalDocPath || null,
       debt_ratio: Number(financials.debt_ratio),
@@ -218,6 +225,8 @@ export default function BuyerForm() {
         budget_max: Number(c.budget_max),
         desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
         desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
+        // Vide : l'apport général du profil s'applique
+        personal_contribution: Number(c.personal_contribution) > 0 ? Number(c.personal_contribution) : null,
       })),
     };
 
@@ -290,7 +299,14 @@ export default function BuyerForm() {
               <p className="mt-1 text-xs text-slate-500">
                 Chaque recherche est évaluée avec son propre budget :{' '}
                 {criteriaList
-                  .map((c, i) => `n° ${i + 1} ${criterionBuyerScore(liveProfile, Number(c.budget_max) || 0)}/100`)
+                  .map(
+                    (c, i) =>
+                      `n° ${i + 1} ${criterionBuyerScore(
+                        liveProfile,
+                        Number(c.budget_max) || 0,
+                        searchContribution(liveProfile, liveProfile.search_criteria[i]),
+                      )}/100`,
+                  )
                   .join(' · ')}
               </p>
             )}
@@ -399,7 +415,42 @@ export default function BuyerForm() {
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
+
+                {/* Apport propre à cette recherche (facultatif) */}
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <Landmark className="h-3.5 w-3.5" /> Apport pour cette recherche
+                    <span className="text-xs text-slate-500">(facultatif)</span>
+                  </label>
+                  <MoneyInput
+                    value={criteria.personal_contribution}
+                    onChange={(v) => updateCriteria(index, 'personal_contribution', v)}
+                    placeholder={
+                      Number(financials.personal_contribution) > 0
+                        ? `Apport général : ${Number(financials.personal_contribution).toLocaleString('fr-CH')}`
+                        : 'Apport général'
+                    }
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
               </div>
+
+              {(() => {
+                const budget = Number(criteria.budget_max) || 0;
+                if (budget <= 0) return null;
+                const own = Number(criteria.personal_contribution) || 0;
+                const apport = own > 0 ? own : Number(financials.personal_contribution) || 0;
+                const pct = (apport / budget) * 100;
+                const ok = pct >= 20;
+                return (
+                  <p className={`text-xs ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>
+                    {apport > 0
+                      ? `Apport ${own > 0 ? 'de cette recherche' : 'général'} : ${apport.toLocaleString('fr-CH')} CHF, soit ${pct.toFixed(1).replace('.', ',')} % du budget`
+                      : 'Aucun apport renseigné'}
+                    {ok ? ' (+20 pts)' : ' (20 % minimum pour les 20 points)'}
+                  </p>
+                );
+              })()}
 
               {/* Surface souhaitée - fourchette */}
               <div>
@@ -464,37 +515,18 @@ export default function BuyerForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Landmark className="h-3.5 w-3.5" /> Apport personnel (CHF)
+                  <Landmark className="h-3.5 w-3.5" /> Apport général (CHF)
                 </label>
                 <MoneyInput
                   value={financials.personal_contribution}
                   onChange={(v) => updateFinancial('personal_contribution', v)}
                   placeholder="200000"
-                  required
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                 />
-                {(() => {
-                  const apport = Number(financials.personal_contribution) || 0;
-                  const lines = criteriaList
-                    .map((c, i) => ({ i, budget: Number(c.budget_max) || 0, zone: c.desired_zone }))
-                    .filter((l) => l.budget > 0);
-                  if (lines.length === 0) return null;
-                  return (
-                    <ul className="mt-2 space-y-1 text-xs">
-                      {lines.map((l) => {
-                        const pct = (apport / l.budget) * 100;
-                        const ok = pct >= 20;
-                        return (
-                          <li key={l.i} className={ok ? 'text-emerald-400' : 'text-amber-300'}>
-                            Recherche {l.i + 1} ({l.zone}) : {pct.toFixed(1)} % de{' '}
-                            {l.budget.toLocaleString('fr-CH')} CHF
-                            {ok ? ' (+20 pts)' : ' (minimum 20 %)'}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  );
-                })()}
+                <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                  S'applique aux recherches sans apport propre. Exemple : votre 2e pilier peut servir pour une
+                  résidence principale, mais pas pour un immeuble de rendement.
+                </p>
               </div>
 
               <div>
