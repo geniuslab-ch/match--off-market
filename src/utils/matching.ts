@@ -51,15 +51,22 @@ export function buyerCriteria(buyer: BuyerProfile): SearchCriteria[] {
       }];
 }
 
+/** Apport d'une recherche : le sien s'il est renseigné, sinon l'apport global du profil (ancien format) */
+export function criterionContribution(buyer: BuyerProfile, c?: SearchCriteria): number {
+  const own = c?.personal_contribution;
+  return own != null && Number(own) > 0 ? Number(own) : Number(buyer.personal_contribution) || 0;
+}
+
 /**
- * Score acheteur pour UNE recherche, avec le budget de cette recherche.
+ * Score acheteur pour UNE recherche, avec le budget ET l'apport de cette recherche.
  * Budget renseigné (40) + apport >= 20 % de CE budget (20) + pré-approbation (30) + endettement <= 33 % (10).
  * Doit rester identique à private.criterion_buyer_score() dans supabase_pilote.sql.
  */
-export function criterionBuyerScore(buyer: BuyerProfile, budget: number): number {
+export function criterionBuyerScore(buyer: BuyerProfile, budget: number, contribution?: number): number {
+  const apport = contribution ?? (Number(buyer.personal_contribution) || 0);
   let score = 0;
   if (budget > 0) score += 40;
-  if (budget > 0 && (buyer.personal_contribution || 0) / budget >= 0.2) score += 20;
+  if (budget > 0 && apport / budget >= 0.2) score += 20;
   if (buyer.has_pre_approval) score += 30;
   if ((buyer.debt_ratio ?? 100) <= 33) score += 10;
   return score;
@@ -67,7 +74,7 @@ export function criterionBuyerScore(buyer: BuyerProfile, budget: number): number
 
 /** Score acheteur du profil : celui de sa meilleure recherche */
 export function calculateBuyerScore(buyer: BuyerProfile): number {
-  return Math.max(0, ...buyerCriteria(buyer).map((c) => criterionBuyerScore(buyer, Number(c.budget_max) || 0)));
+  return Math.max(0, ...buyerCriteria(buyer).map((c) => criterionBuyerScore(buyer, Number(c.budget_max) || 0, criterionContribution(buyer, c))));
 }
 
 export function isBuyerQualified(buyer: BuyerProfile): boolean {
@@ -225,7 +232,11 @@ export function calculateMatchScore(
 
   for (let i = 0; i < criteria.length; i++) {
     // Chaque recherche est évaluée avec son propre budget : si l'apport ne le couvre pas, on l'ignore
-    const criterionScore = criterionBuyerScore(buyer, Number(criteria[i].budget_max) || 0);
+    const criterionScore = criterionBuyerScore(
+      buyer,
+      Number(criteria[i].budget_max) || 0,
+      criterionContribution(buyer, criteria[i]),
+    );
     if (criterionScore < BUYER_SCORE_THRESHOLD) continue;
     const result = calculateMatchWithCriteria(buyer, property, criteria[i], criterionScore, sellerScore);
     if (result.matchScore > bestResult.matchScore) {

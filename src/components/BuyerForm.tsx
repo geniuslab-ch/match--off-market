@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
-import { calculateBuyerScore, criterionBuyerScore } from '../utils/matching';
+import { calculateBuyerScore, criterionBuyerScore, criterionContribution } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile } from '../types';
 import CommuneSelect from './CommuneSelect';
@@ -29,6 +29,7 @@ interface CriteriaForm {
   desired_zone: string;
   desired_property_type: PropertyType;
   budget_max: string;
+  personal_contribution: string;
   desired_surface_min_m2: string;
   desired_surface_max_m2: string;
 }
@@ -38,9 +39,16 @@ function newCriteria(): CriteriaForm {
     desired_zone: 'Lausanne',
     desired_property_type: 'apartment',
     budget_max: '',
+    personal_contribution: '',
     desired_surface_min_m2: '',
     desired_surface_max_m2: '',
   };
+}
+
+/** Apport global du profil : le plus petit apport renseigné (rétro-compatibilité) */
+function globalContribution(list: CriteriaForm[]): number {
+  const values = list.map((c) => Number(c.personal_contribution) || 0).filter((v) => v > 0);
+  return values.length ? Math.min(...values) : 0;
 }
 
 export default function BuyerForm() {
@@ -51,7 +59,6 @@ export default function BuyerForm() {
     newCriteria(),
   ]);
   const [financials, setFinancials] = useState({
-    personal_contribution: '',
     has_pre_approval: false,
     debt_ratio: '',
   });
@@ -83,6 +90,8 @@ export default function BuyerForm() {
                 desired_zone: c.desired_zone,
                 desired_property_type: c.desired_property_type,
                 budget_max: c.budget_max ? String(c.budget_max) : '',
+                // Ancien format : l'apport global sert de valeur de départ pour chaque recherche
+                personal_contribution: criterionContribution(p, c) > 0 ? String(Math.round(criterionContribution(p, c))) : '',
                 desired_surface_min_m2: c.desired_surface_min_m2 ? String(c.desired_surface_min_m2) : '',
                 desired_surface_max_m2: c.desired_surface_max_m2 ? String(c.desired_surface_max_m2) : '',
               }))
@@ -91,13 +100,13 @@ export default function BuyerForm() {
                   desired_zone: p.desired_zone || 'Lausanne',
                   desired_property_type: p.desired_property_type || 'apartment',
                   budget_max: p.budget_max ? String(p.budget_max) : '',
+                  personal_contribution: p.personal_contribution ? String(Math.round(Number(p.personal_contribution))) : '',
                   desired_surface_min_m2: p.desired_surface_m2 ? String(p.desired_surface_m2) : '',
                   desired_surface_max_m2: '',
                 },
               ],
         );
         setFinancials({
-          personal_contribution: p.personal_contribution != null ? String(Math.round(Number(p.personal_contribution))) : '',
           has_pre_approval: Boolean(p.has_pre_approval),
           debt_ratio: p.debt_ratio != null ? String(p.debt_ratio) : '',
         });
@@ -116,13 +125,14 @@ export default function BuyerForm() {
   const liveProfile = {
     budget_max:
       Math.max(...criteriaList.map((c) => Number(c.budget_max) || 0)) || 0,
-    personal_contribution: Number(financials.personal_contribution) || 0,
+    personal_contribution: globalContribution(criteriaList),
     has_pre_approval: financials.has_pre_approval,
     debt_ratio: Number(financials.debt_ratio) || 0,
     search_criteria: criteriaList.map((c) => ({
       desired_zone: c.desired_zone,
       desired_property_type: c.desired_property_type,
       budget_max: Number(c.budget_max) || 0,
+      personal_contribution: Number(c.personal_contribution) || 0,
       desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
       desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
     })),
@@ -186,6 +196,10 @@ export default function BuyerForm() {
         setError(`Critère ${i + 1} : le budget max est requis.`);
         return;
       }
+      if (!c.personal_contribution || Number(c.personal_contribution) <= 0) {
+        setError(`Critère ${i + 1} : l'apport personnel est requis.`);
+        return;
+      }
       const minS = Number(c.desired_surface_min_m2);
       const maxS = Number(c.desired_surface_max_m2);
       if (minS && maxS && minS > maxS) {
@@ -206,7 +220,8 @@ export default function BuyerForm() {
       desired_property_type: primary.desired_property_type,
       budget_max: Number(primary.budget_max),
       desired_surface_m2: Number(primary.desired_surface_min_m2) || 0,
-      personal_contribution: Number(financials.personal_contribution),
+      // Apport global = le plus petit des apports (valeur prudente pour l'ancien calcul)
+      personal_contribution: globalContribution(criteriaList),
       has_pre_approval: financials.has_pre_approval,
       pre_approval_doc_path: preApprovalDocPath || null,
       debt_ratio: Number(financials.debt_ratio),
@@ -216,6 +231,7 @@ export default function BuyerForm() {
         desired_zone: c.desired_zone,
         desired_property_type: c.desired_property_type,
         budget_max: Number(c.budget_max),
+        personal_contribution: Number(c.personal_contribution) || 0,
         desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
         desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
       })),
@@ -290,7 +306,7 @@ export default function BuyerForm() {
               <p className="mt-1 text-xs text-slate-500">
                 Chaque recherche est évaluée avec son propre budget :{' '}
                 {criteriaList
-                  .map((c, i) => `n° ${i + 1} ${criterionBuyerScore(liveProfile, Number(c.budget_max) || 0)}/100`)
+                  .map((c, i) => `n° ${i + 1} ${criterionBuyerScore(liveProfile, Number(c.budget_max) || 0, Number(c.personal_contribution) || 0)}/100`)
                   .join(' · ')}
               </p>
             )}
@@ -399,6 +415,34 @@ export default function BuyerForm() {
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
                 </div>
+
+                {/* Apport personnel prévu pour cette recherche */}
+                <div className="col-span-2 sm:col-span-1">
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <Landmark className="h-3.5 w-3.5" /> Apport personnel (CHF)
+                  </label>
+                  <MoneyInput
+                    value={criteria.personal_contribution}
+                    onChange={(v) => updateCriteria(index, 'personal_contribution', v)}
+                    placeholder="200000"
+                    required
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                  {(() => {
+                    const budget = Number(criteria.budget_max) || 0;
+                    const apport = Number(criteria.personal_contribution) || 0;
+                    if (budget <= 0 || apport <= 0) {
+                      return <p className="mt-1 text-xs text-slate-500">Au moins 20 % du budget : +20 pts</p>;
+                    }
+                    const pct = (apport / budget) * 100;
+                    const ok = pct >= 20;
+                    return (
+                      <p className={`mt-1 text-xs ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>
+                        {pct.toFixed(1)} % du budget{ok ? ' (+20 pts)' : ' (minimum 20 %)'}
+                      </p>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Surface souhaitée - fourchette */}
@@ -462,41 +506,6 @@ export default function BuyerForm() {
             </h2>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Landmark className="h-3.5 w-3.5" /> Apport personnel (CHF)
-                </label>
-                <MoneyInput
-                  value={financials.personal_contribution}
-                  onChange={(v) => updateFinancial('personal_contribution', v)}
-                  placeholder="200000"
-                  required
-                  className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
-                />
-                {(() => {
-                  const apport = Number(financials.personal_contribution) || 0;
-                  const lines = criteriaList
-                    .map((c, i) => ({ i, budget: Number(c.budget_max) || 0, zone: c.desired_zone }))
-                    .filter((l) => l.budget > 0);
-                  if (lines.length === 0) return null;
-                  return (
-                    <ul className="mt-2 space-y-1 text-xs">
-                      {lines.map((l) => {
-                        const pct = (apport / l.budget) * 100;
-                        const ok = pct >= 20;
-                        return (
-                          <li key={l.i} className={ok ? 'text-emerald-400' : 'text-amber-300'}>
-                            Recherche {l.i + 1} ({l.zone}) : {pct.toFixed(1)} % de{' '}
-                            {l.budget.toLocaleString('fr-CH')} CHF
-                            {ok ? ' (+20 pts)' : ' (minimum 20 %)'}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  );
-                })()}
-              </div>
-
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                   <Percent className="h-3.5 w-3.5" /> Taux d'endettement (%)

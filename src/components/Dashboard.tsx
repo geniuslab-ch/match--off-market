@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import type { BuyerProfile, Property } from '../types';
 import { PROPERTY_TYPE_LABELS } from '../types';
-import { calculateBuyerScore, isBuyerQualified, findMatchesForBuyer } from '../utils/matching';
+import { calculateBuyerScore, criterionContribution, isBuyerQualified, findMatchesForBuyer } from '../utils/matching';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import {
@@ -232,7 +232,7 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
         {(() => {
           // L'apport est évalué recherche par recherche : on affiche la fourchette
           const pcts = criteria
-            .map((c) => (Number(c.budget_max) > 0 ? (buyer.personal_contribution / Number(c.budget_max)) * 100 : 0))
+            .map((c) => (Number(c.budget_max) > 0 ? (criterionContribution(buyer, c) / Number(c.budget_max)) * 100 : 0))
             .filter((x) => x > 0);
           const lo = pcts.length ? Math.min(...pcts) : parseFloat(contributionPct);
           const hi = pcts.length ? Math.max(...pcts) : parseFloat(contributionPct);
@@ -260,10 +260,10 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                 {Number(c.budget_max) > 0 && (
                   <p
                     className={
-                      buyer.personal_contribution / Number(c.budget_max) >= 0.2 ? 'text-emerald-400' : 'text-amber-300'
+                      criterionContribution(buyer, c) / Number(c.budget_max) >= 0.2 ? 'text-emerald-400' : 'text-amber-300'
                     }
                   >
-                    apport {Math.round((buyer.personal_contribution / Number(c.budget_max)) * 100)} %
+                    apport {chf(criterionContribution(buyer, c))} ({Math.round((criterionContribution(buyer, c) / Number(c.budget_max)) * 100)} %)
                   </p>
                 )}
               </div>

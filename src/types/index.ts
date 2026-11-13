@@ -35,6 +35,8 @@ export interface SearchCriteria {
   budget_max: number;
   desired_surface_min_m2: number;
   desired_surface_max_m2: number;
+  /** Apport personnel prévu pour CETTE recherche (CHF). Absent : apport global du profil. */
+  personal_contribution?: number;
 }
 
 export interface BuyerProfile {
