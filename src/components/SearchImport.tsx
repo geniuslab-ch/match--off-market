@@ -6,7 +6,7 @@ import type { BuyerProfile, PropertyType, SearchCriteria } from '../types';
 import { calculateBuyerScore } from '../utils/matching';
 import { parseSearchFile, SEARCH_TEMPLATE } from '../utils/searchImport';
 import ExcelImportPage from './ExcelImportPage';
-import { roomsLabel } from './SearchCard';
+import { searchFeatureLabels } from '../utils/propertyFields';
 
 const chf = (n: unknown) => `${Number(n).toLocaleString('fr-CH')} CHF`;
 
@@ -46,14 +46,26 @@ export default function SearchImport() {
             r.payload ? (r.payload.personal_contribution ? chf(r.payload.personal_contribution) : 'général') : r.values.personal_contribution,
         },
         {
-          label: 'Surface, pièces',
+          label: 'Caractéristiques',
           render: (r) => {
             if (!r.payload) return [r.values.desired_surface_min_m2, r.values.desired_surface_max_m2].filter(Boolean).join(' à ');
             const p = r.payload as unknown as SearchCriteria;
             const lo = p.desired_surface_min_m2;
             const hi = p.desired_surface_max_m2;
             const s = lo && hi ? `${lo} à ${hi} m²` : lo ? `dès ${lo} m²` : hi ? `jusqu'à ${hi} m²` : '';
-            return [s, roomsLabel(p.desired_rooms_min, p.desired_rooms_max)].filter(Boolean).join(' · ');
+            return [
+              s,
+              ...searchFeatureLabels({
+                rooms_min: p.desired_rooms_min,
+                rooms_max: p.desired_rooms_max,
+                units_min: p.desired_units_min,
+                units_max: p.desired_units_max,
+                commercial_type: p.desired_commercial_type,
+                min_yield: p.min_gross_yield,
+              }),
+            ]
+              .filter(Boolean)
+              .join(' · ');
           },
         },
       ]}

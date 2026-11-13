@@ -19,12 +19,16 @@ import {
   DoorOpen,
   Tag,
   FileSpreadsheet,
+  Building2,
+  Store,
+  TrendingUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { calculateBuyerScore, criterionBuyerScore, searchContribution } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
-import type { PropertyType, BuyerProfile } from '../types';
+import type { PropertyType, BuyerProfile, SearchCriteria, CommercialType } from '../types';
+import { COMMERCIAL_TYPES, fieldRules } from '../utils/propertyFields';
 import CommuneSelect from './CommuneSelect';
 import MoneyInput from './MoneyInput';
 import Brand from './Brand';
@@ -43,6 +47,60 @@ interface CriteriaForm {
   desired_rooms_max: string;
   /** Référence privée (ex. nom du client) */
   label: string;
+  /** Immeubles : nombre d'appartements */
+  desired_units_min: string;
+  desired_units_max: string;
+  /** Immeuble mixte, commercial : type de commerce (vide : indifférent) */
+  desired_commercial_type: string;
+  /** Rendement brut minimum (%) */
+  min_gross_yield: string;
+}
+
+const str = (n: unknown) => (Number(n) > 0 ? String(n) : '');
+
+/** Recherche enregistrée -> champs du formulaire */
+function fromSaved(c: SearchCriteria): CriteriaForm {
+  return {
+    desired_zone: c.desired_zone,
+    desired_property_type: c.desired_property_type,
+    budget_max: str(c.budget_max),
+    desired_surface_min_m2: str(c.desired_surface_min_m2),
+    desired_surface_max_m2: str(c.desired_surface_max_m2),
+    personal_contribution: Number(c.personal_contribution) > 0 ? String(Math.round(Number(c.personal_contribution))) : '',
+    desired_rooms_min: str(c.desired_rooms_min),
+    desired_rooms_max: str(c.desired_rooms_max),
+    label: c.label ?? '',
+    desired_units_min: str(c.desired_units_min),
+    desired_units_max: str(c.desired_units_max),
+    desired_commercial_type: c.desired_commercial_type ?? '',
+    min_gross_yield: str(c.min_gross_yield),
+  };
+}
+
+/**
+ * Champs du formulaire -> recherche à enregistrer. Seuls les champs qui concernent
+ * le type de bien choisi sont gardés (ex. pas de pièces pour un immeuble).
+ */
+function toSaved(c: CriteriaForm): SearchCriteria {
+  const rules = fieldRules(c.desired_property_type);
+  const num = (v: string) => (Number(v) > 0 ? Number(v) : null);
+  return {
+    desired_zone: c.desired_zone,
+    desired_property_type: c.desired_property_type,
+    budget_max: Number(c.budget_max) || 0,
+    desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
+    desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
+    // Vide : l'apport général du profil s'applique
+    personal_contribution: num(c.personal_contribution),
+    desired_rooms_min: rules.rooms ? num(c.desired_rooms_min) : null,
+    desired_rooms_max: rules.rooms ? num(c.desired_rooms_max) : null,
+    desired_units_min: rules.units ? num(c.desired_units_min) : null,
+    desired_units_max: rules.units ? num(c.desired_units_max) : null,
+    desired_commercial_type:
+      rules.commercialType && c.desired_commercial_type ? (c.desired_commercial_type as CommercialType) : null,
+    min_gross_yield: rules.yield ? num(c.min_gross_yield) : null,
+    label: c.label.trim() || null,
+  };
 }
 
 // Nombres de pièces proposés (usage suisse : demi-pièces)
@@ -60,6 +118,10 @@ function newCriteria(): CriteriaForm {
     desired_rooms_min: '',
     desired_rooms_max: '',
     label: '',
+    desired_units_min: '',
+    desired_units_max: '',
+    desired_commercial_type: '',
+    min_gross_yield: '',
   };
 }
 
@@ -104,29 +166,14 @@ export default function BuyerForm() {
         const saved = p.search_criteria && p.search_criteria.length > 0 ? p.search_criteria : null;
         setCriteriaList(
           saved
-            ? saved.map((c) => ({
-                desired_zone: c.desired_zone,
-                desired_property_type: c.desired_property_type,
-                budget_max: c.budget_max ? String(c.budget_max) : '',
-                desired_surface_min_m2: c.desired_surface_min_m2 ? String(c.desired_surface_min_m2) : '',
-                desired_surface_max_m2: c.desired_surface_max_m2 ? String(c.desired_surface_max_m2) : '',
-                personal_contribution:
-                  Number(c.personal_contribution) > 0 ? String(Math.round(Number(c.personal_contribution))) : '',
-                desired_rooms_min: Number(c.desired_rooms_min) > 0 ? String(c.desired_rooms_min) : '',
-                desired_rooms_max: Number(c.desired_rooms_max) > 0 ? String(c.desired_rooms_max) : '',
-                label: c.label ?? '',
-              }))
+            ? saved.map(fromSaved)
             : [
                 {
+                  ...newCriteria(),
                   desired_zone: p.desired_zone || 'Lausanne',
                   desired_property_type: p.desired_property_type || 'apartment',
-                  budget_max: p.budget_max ? String(p.budget_max) : '',
-                  desired_surface_min_m2: p.desired_surface_m2 ? String(p.desired_surface_m2) : '',
-                  desired_surface_max_m2: '',
-                  personal_contribution: '',
-                  desired_rooms_min: '',
-                  desired_rooms_max: '',
-                  label: '',
+                  budget_max: str(p.budget_max),
+                  desired_surface_min_m2: str(p.desired_surface_m2),
                 },
               ],
         );
@@ -155,16 +202,7 @@ export default function BuyerForm() {
     has_pre_approval: financials.has_pre_approval,
     // Endettement non renseigné : pas de points (comme dans la base)
     debt_ratio: financials.debt_ratio === '' ? 100 : Number(financials.debt_ratio),
-    search_criteria: criteriaList.map((c) => ({
-      desired_zone: c.desired_zone,
-      desired_property_type: c.desired_property_type,
-      budget_max: Number(c.budget_max) || 0,
-      desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
-      desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
-      personal_contribution: Number(c.personal_contribution) || null,
-      desired_rooms_min: Number(c.desired_rooms_min) || null,
-      desired_rooms_max: Number(c.desired_rooms_max) || null,
-    })),
+    search_criteria: criteriaList.map(toSaved),
   } as BuyerProfile;
   const liveScore = calculateBuyerScore(liveProfile);
 
@@ -211,6 +249,11 @@ export default function BuyerForm() {
     const minR = Number(c.desired_rooms_min);
     const maxR = Number(c.desired_rooms_max);
     if (minR && maxR && minR > maxR) return `Recherche ${i + 1} : le nombre de pièces min ne peut pas dépasser le max.`;
+    const minU = Number(c.desired_units_min);
+    const maxU = Number(c.desired_units_max);
+    if (minU && maxU && minU > maxU) return `Recherche ${i + 1} : le nombre d'appartements min ne peut pas dépasser le max.`;
+    const y = Number(c.min_gross_yield);
+    if (c.min_gross_yield && (Number.isNaN(y) || y < 0 || y > 30)) return `Recherche ${i + 1} : rendement brut entre 0 et 30 %.`;
     return null;
   }
 
@@ -250,18 +293,7 @@ export default function BuyerForm() {
       debt_ratio: financials.debt_ratio === '' ? null : Number(financials.debt_ratio),
       score: liveScore,
       share_search: shareSearch,
-      search_criteria: ready.map((c) => ({
-        desired_zone: c.desired_zone,
-        desired_property_type: c.desired_property_type,
-        budget_max: Number(c.budget_max),
-        desired_surface_min_m2: Number(c.desired_surface_min_m2) || 0,
-        desired_surface_max_m2: Number(c.desired_surface_max_m2) || 0,
-        // Vide : l'apport général du profil s'applique
-        personal_contribution: Number(c.personal_contribution) > 0 ? Number(c.personal_contribution) : null,
-        desired_rooms_min: Number(c.desired_rooms_min) > 0 ? Number(c.desired_rooms_min) : null,
-        desired_rooms_max: Number(c.desired_rooms_max) > 0 ? Number(c.desired_rooms_max) : null,
-        label: c.label.trim() || null,
-      })),
+      search_criteria: ready.map(toSaved),
     };
 
     const { error: err } = await supabase.from('buyer_profiles').upsert(payload, { onConflict: 'user_id' });
@@ -594,77 +626,116 @@ export default function BuyerForm() {
                 );
               })()}
 
-              {/* Surface souhaitée - fourchette */}
-              <div>
-                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Ruler className="h-3.5 w-3.5" /> Surface souhaitée (m²)
-                </label>
-                <div className="grid grid-cols-2 gap-3">
+              {(() => {
+                const rules = fieldRules(criteria.desired_property_type);
+                const range = (
+                  icon: React.ReactNode,
+                  label: string,
+                  fields: [keyof CriteriaForm, keyof CriteriaForm],
+                  options: number[] | null,
+                  unit: [string, string],
+                  placeholders: [string, string] = ['Min.', 'Max.'],
+                ) => (
                   <div>
-                    <input
-                      type="number"
-                      value={criteria.desired_surface_min_m2}
-                      onChange={(e) =>
-                        updateCriteria(
-                          index,
-                          'desired_surface_min_m2',
-                          e.target.value
-                        )
-                      }
-                      placeholder="Min. ex: 60"
-                      min={0}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
-                    />
-                    <p className="mt-0.5 text-xs text-slate-500">Minimum</p>
-                  </div>
-                  <div>
-                    <input
-                      type="number"
-                      value={criteria.desired_surface_max_m2}
-                      onChange={(e) =>
-                        updateCriteria(
-                          index,
-                          'desired_surface_max_m2',
-                          e.target.value
-                        )
-                      }
-                      placeholder="Max. ex: 120"
-                      min={0}
-                      className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
-                    />
-                    <p className="mt-0.5 text-xs text-slate-500">Maximum</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Nombre de pièces souhaité (facultatif) */}
-              <div>
-                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <DoorOpen className="h-3.5 w-3.5" /> Nombre de pièces
-                  <span className="text-xs text-slate-500">(facultatif)</span>
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(['desired_rooms_min', 'desired_rooms_max'] as const).map((field) => (
-                    <div key={field}>
-                      <select
-                        value={criteria[field]}
-                        onChange={(e) => updateCriteria(index, field, e.target.value)}
-                        className={inputCls}
-                      >
-                        <option value="">Indifférent</option>
-                        {ROOM_OPTIONS.map((n) => (
-                          <option key={n} value={String(n)}>
-                            {roomText(n)} pièce{n >= 2 ? 's' : ''}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="mt-0.5 text-xs text-slate-500">
-                        {field === 'desired_rooms_min' ? 'Minimum' : 'Maximum'}
-                      </p>
+                    <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                      {icon} {label}
+                      <span className="text-xs text-slate-500">(facultatif)</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {fields.map((field, k) => (
+                        <div key={field}>
+                          {options ? (
+                            <select
+                              value={criteria[field]}
+                              onChange={(e) => updateCriteria(index, field, e.target.value)}
+                              className={inputCls}
+                            >
+                              <option value="">Indifférent</option>
+                              {options.map((n) => (
+                                <option key={n} value={String(n)}>
+                                  {roomText(n)} {n >= 2 ? unit[1] : unit[0]}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="number"
+                              value={criteria[field]}
+                              onChange={(e) => updateCriteria(index, field, e.target.value)}
+                              placeholder={placeholders[k]}
+                              min={0}
+                              className={inputCls}
+                            />
+                          )}
+                          <p className="mt-0.5 text-xs text-slate-500">{k === 0 ? 'Minimum' : 'Maximum'}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
+                  </div>
+                );
+                return (
+                  <>
+                    {rules.units &&
+                      range(<Building2 className="h-3.5 w-3.5" />, "Nombre d'appartements", ['desired_units_min', 'desired_units_max'], null, ['appartement', 'appartements'], ['Min. ex: 3', 'Max. ex: 10'])}
+
+                    {rules.commercialType && (
+                      <div>
+                        <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                          <Store className="h-3.5 w-3.5" />
+                          {rules.units ? 'Type de commerce au rez' : 'Type de local'}
+                          <span className="text-xs text-slate-500">(facultatif)</span>
+                        </label>
+                        <select
+                          value={criteria.desired_commercial_type}
+                          onChange={(e) => updateCriteria(index, 'desired_commercial_type', e.target.value)}
+                          className={inputCls}
+                        >
+                          <option value="">Indifférent</option>
+                          {COMMERCIAL_TYPES.map(([val, label]) => (
+                            <option key={val} value={val}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {rules.yield && (
+                      <div>
+                        <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                          <TrendingUp className="h-3.5 w-3.5" /> Rendement brut minimum (%)
+                          <span className="text-xs text-slate-500">(facultatif)</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={criteria.min_gross_yield}
+                          onChange={(e) => updateCriteria(index, 'min_gross_yield', e.target.value)}
+                          placeholder="Ex. 4,5"
+                          min={0}
+                          max={30}
+                          step={0.1}
+                          className={inputCls}
+                        />
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          Loyers annuels hors charges divisés par le prix. Un bien sans état locatif n'est pas écarté.
+                        </p>
+                      </div>
+                    )}
+
+                    {range(
+                      <Ruler className="h-3.5 w-3.5" />,
+                      rules.surfaceLabel,
+                      ['desired_surface_min_m2', 'desired_surface_max_m2'],
+                      null,
+                      ['m²', 'm²'],
+                      ['Min. ex: 60', 'Max. ex: 120'],
+                    )}
+
+                    {rules.rooms &&
+                      range(<DoorOpen className="h-3.5 w-3.5" />, 'Nombre de pièces', ['desired_rooms_min', 'desired_rooms_max'], ROOM_OPTIONS, ['pièce', 'pièces'])}
+                  </>
+                );
+              })()}
             </section>
           )}
 

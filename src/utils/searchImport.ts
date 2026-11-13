@@ -1,6 +1,7 @@
 // Import de recherches d'acheteurs depuis Excel (page /buyer/import)
 // Chaque ligne devient une recherche du profil acheteur connecté.
-import { findType, findZone, parseNumber, readSheet } from './excel';
+import { findCommerce, findType, findZone, parseNumber, readSheet } from './excel';
+import { fieldRules } from './propertyFields';
 import type { ImportColumn, ImportedRow, TemplateSpec } from './excel';
 
 export const SEARCH_COLUMNS: ImportColumn[] = [
@@ -11,8 +12,12 @@ export const SEARCH_COLUMNS: ImportColumn[] = [
   { key: 'personal_contribution', header: 'Apport (CHF)', width: 14, money: true, help: "Facultatif. Vide : l'apport général du profil s'applique. 20 % du budget au moins pour les 20 points.", example: 250000 },
   { key: 'desired_surface_min_m2', header: 'Surface min (m²)', width: 12, help: 'Facultatif.', example: 70 },
   { key: 'desired_surface_max_m2', header: 'Surface max (m²)', width: 12, help: 'Facultatif.', example: 100 },
-  { key: 'desired_rooms_min', header: 'Pièces min', width: 10, help: 'Facultatif. Ex. 3,5.', example: 3.5 },
-  { key: 'desired_rooms_max', header: 'Pièces max', width: 10, help: 'Facultatif. Ex. 4,5.', example: 4.5 },
+  { key: 'desired_rooms_min', header: 'Pièces min', width: 10, help: 'Logements (appartement, maison, villa). Facultatif. Ex. 3,5.', example: 3.5 },
+  { key: 'desired_rooms_max', header: 'Pièces max', width: 10, help: 'Logements. Facultatif. Ex. 4,5.', example: 4.5 },
+  { key: 'desired_units_min', header: 'Appartements min', width: 12, help: 'Immeubles de rendement. Facultatif.', example: null },
+  { key: 'desired_units_max', header: 'Appartements max', width: 12, help: 'Immeubles de rendement. Facultatif.', example: null },
+  { key: 'desired_commercial_type', header: 'Type de commerce', width: 16, list: 'commerce', help: 'Immeuble mixte ou local commercial. Vide : indifférent.', example: null },
+  { key: 'min_gross_yield', header: 'Rendement brut min (%)', width: 12, help: 'Immeubles et commercial. Ex. 4,5. Facultatif.', example: null },
 ];
 
 export const SEARCH_TEMPLATE: TemplateSpec = {
@@ -23,7 +28,8 @@ export const SEARCH_TEMPLATE: TemplateSpec = {
   allowCantons: true,
   examples: [
     SEARCH_COLUMNS.map((c) => c.example),
-    ['Client Martin', 'Canton du Valais', 'Immeuble de rendement habitation', 1000000, 300000, null, null, null, null],
+    ['Client Martin', 'Canton du Valais', 'Immeuble de rendement habitation', 1000000, 300000, null, null, null, null, 3, 8, null, 4.5],
+    ['Client Rossi', 'Canton de Vaud', 'Immeuble de rendement mixte', 3000000, 800000, null, null, null, null, 4, null, 'Restaurant', 4],
   ],
   notes: [
     'Une ligne par recherche. Le financement (pré-approbation bancaire, endettement, apport général) se renseigne ensuite dans le profil acheteur.',
@@ -63,8 +69,20 @@ function validateSearch(line: number, v: Record<string, string>): ImportedRow {
   const apport = optional('personal_contribution', 'apport');
   const smin = optional('desired_surface_min_m2', 'surface min');
   const smax = optional('desired_surface_max_m2', 'surface max');
-  const rmin = optional('desired_rooms_min', 'pièces min', 50);
-  const rmax = optional('desired_rooms_max', 'pièces max', 50);
+  // Champs propres au type : ignorés s'ils ne le concernent pas
+  const rules = fieldRules(type ?? 'apartment');
+  const only = <T,>(applies: boolean, value: T) => (applies ? value : null);
+  const rmin = only(rules.rooms, optional('desired_rooms_min', 'pièces min', 50));
+  const rmax = only(rules.rooms, optional('desired_rooms_max', 'pièces max', 50));
+  const umin = only(rules.units, optional('desired_units_min', 'appartements min', 1000));
+  const umax = only(rules.units, optional('desired_units_max', 'appartements max', 1000));
+  const ymin = only(rules.yield, optional('min_gross_yield', 'rendement', 30));
+  let commerce: string | null = null;
+  if (rules.commercialType && (v.desired_commercial_type ?? '') !== '') {
+    commerce = findCommerce(v.desired_commercial_type);
+    if (!commerce) errors.push(`type de commerce inconnu « ${v.desired_commercial_type} »`);
+  }
+  if (umin && umax && umin > umax) errors.push("appartements min supérieurs aux appartements max");
   if (smin && smax && smin > smax) errors.push('surface min supérieure à la surface max');
   if (rmin && rmax && rmin > rmax) errors.push('pièces min supérieures aux pièces max');
   if (apport && budget && !Number.isNaN(budget) && apport > budget) errors.push("l'apport dépasse le budget");
@@ -86,6 +104,10 @@ function validateSearch(line: number, v: Record<string, string>): ImportedRow {
       desired_surface_max_m2: smax ?? 0,
       desired_rooms_min: rmin,
       desired_rooms_max: rmax,
+      desired_units_min: umin != null ? Math.round(umin) : null,
+      desired_units_max: umax != null ? Math.round(umax) : null,
+      desired_commercial_type: commerce,
+      min_gross_yield: ymin,
     },
   };
 }

@@ -130,7 +130,9 @@ export function isSellerQualified(_property: Property): boolean {
 // Zone OK                          → +20
 // Prix <= Budget                   → +30
 // Type de bien OK                  → +20
-// Surface et pièces dans fourchette → +10 (pièces : seulement si renseignées des deux côtés)
+// Caractéristiques                 → +10 : surface, et selon le type pièces, nombre
+//                                    d'appartements, type de commerce, rendement brut
+//                                    (chaque critère n'est vérifié que s'il est renseigné des deux côtés)
 // + (Score Acheteur * 0.1)         → jusqu'à +10
 // + (Score Vendeur * 0.1)          → jusqu'à +10
 // Match si Score Global >= 70
@@ -188,6 +190,23 @@ export function checkRoomsMatch(
   return true;
 }
 
+/**
+ * Pièces, nombre d'appartements, type de commerce et rendement brut.
+ * Doit rester identique au calcul de private.match_details().
+ */
+export function checkFeaturesMatch(property: Property, criteria: SearchCriteria): boolean {
+  if (!checkRoomsMatch(property.rooms, criteria.desired_rooms_min, criteria.desired_rooms_max)) return false;
+  if (!checkRoomsMatch(property.units_count, criteria.desired_units_min, criteria.desired_units_max)) return false;
+  const wantedCommerce = criteria.desired_commercial_type || '';
+  const commerce = property.commercial_type || '';
+  if (wantedCommerce && commerce && wantedCommerce !== commerce) return false;
+  const minYield = Number(criteria.min_gross_yield) || 0;
+  const rent = Number(property.annual_rent) || 0;
+  const price = Number(property.price) || 0;
+  if (minYield > 0 && rent > 0 && price > 0 && (rent / price) * 100 < minYield) return false;
+  return true;
+}
+
 // Match avec un critère de recherche spécifique
 function calculateMatchWithCriteria(
   buyer: BuyerProfile,
@@ -215,10 +234,11 @@ function calculateMatchWithCriteria(
   const typeMatch = typeFamily(criteria.desired_property_type) === typeFamily(property.property_type);
   if (typeMatch) matchScore += 20;
 
-  // Surface et pièces dans la fourchette (+10). Un bien sans nombre de pièces n'est pas pénalisé.
+  // Caractéristiques (+10) : surface, pièces, appartements, commerce, rendement.
+  // Une information absente côté bien ne pénalise pas.
   const surfaceMatch =
     checkSurfaceMatch(property.surface_m2, criteria.desired_surface_min_m2, criteria.desired_surface_max_m2) &&
-    checkRoomsMatch(property.rooms, criteria.desired_rooms_min, criteria.desired_rooms_max);
+    checkFeaturesMatch(property, criteria);
   if (surfaceMatch) matchScore += 10;
 
   // Bonus scores

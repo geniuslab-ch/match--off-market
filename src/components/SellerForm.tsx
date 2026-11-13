@@ -35,7 +35,7 @@ import {
 import type { PropertyType, SituationType, HouseType, CommercialType, Property } from '../types';
 import CommuneSelect from './CommuneSelect';
 import MoneyInput from './MoneyInput';
-import { typeFamily } from '../utils/matching';
+import { fieldRules, grossYield, pct } from '../utils/propertyFields';
 import Brand from './Brand';
 
 export default function SellerForm() {
@@ -52,6 +52,9 @@ export default function SellerForm() {
     price: '',
     surface_m2: '',
     rooms: '',
+    units_count: '',
+    commercial_units: '',
+    annual_rent: '',
     floor: '',
     house_type: '' as HouseType | '',
     commercial_type: '' as CommercialType | '',
@@ -96,6 +99,9 @@ export default function SellerForm() {
             price: p.price != null ? String(Math.round(Number(p.price))) : '',
             surface_m2: str(p.surface_m2),
             rooms: str(p.rooms),
+            units_count: str(p.units_count),
+            commercial_units: str(p.commercial_units),
+            annual_rent: p.annual_rent != null ? String(Math.round(Number(p.annual_rent))) : '',
             floor: str(p.floor),
             house_type: (str(p.house_type) as HouseType | ''),
             commercial_type: (str(p.commercial_type) as CommercialType | ''),
@@ -117,6 +123,10 @@ export default function SellerForm() {
       alive = false;
     };
   }, [editId]);
+
+  // Champs à afficher selon le type de bien
+  const rules = fieldRules(form.property_type);
+  const yieldPct = rules.yield ? grossYield(Number(form.annual_rent), Number(form.price)) : null;
 
   // Score vendeur en temps réel
   const liveProperty = {
@@ -176,7 +186,6 @@ export default function SellerForm() {
         zone: form.zone,
         price: Number(form.price),
         surface_m2: Number(form.surface_m2),
-        rooms: form.rooms ? Number(form.rooms) : null,
         urgency_level: Number(form.urgency_level),
         listing_age_days: Number(form.listing_age_days),
         is_conditional_sale: form.is_conditional_sale,
@@ -184,12 +193,16 @@ export default function SellerForm() {
         score: liveScore,
       };
 
-      // Champs optionnels : vides (null) s'ils ne s'appliquent pas, pour qu'une modification puisse les effacer
-      const family = typeFamily(form.property_type);
-      payload.floor = family === 'apartment' && form.floor ? form.floor : null;
-      payload.house_type =
-        (family === 'house' || form.property_type === 'villa') && form.house_type ? form.house_type : null;
-      payload.commercial_type = form.property_type === 'commercial' && form.commercial_type ? form.commercial_type : null;
+      // Champs selon le type de bien : vides (null) s'ils ne s'appliquent pas,
+      // pour qu'un changement de type ou une modification puisse les effacer
+      const num = (v: string) => (Number(v) > 0 ? Number(v) : null);
+      payload.rooms = rules.rooms ? num(form.rooms) : null;
+      payload.units_count = rules.units ? num(form.units_count) : null;
+      payload.commercial_units = rules.commercialUnits ? num(form.commercial_units) : null;
+      payload.annual_rent = rules.yield ? num(form.annual_rent) : null;
+      payload.floor = rules.floor && form.floor ? form.floor : null;
+      payload.house_type = rules.houseType && form.house_type ? form.house_type : null;
+      payload.commercial_type = rules.commercialType && form.commercial_type ? form.commercial_type : null;
       payload.situation = form.situation || null;
       payload.exterior = form.exterior.length > 0 ? form.exterior : null;
       payload.parking_types = form.parking_types.length > 0 ? form.parking_types : null;
@@ -329,8 +342,8 @@ export default function SellerForm() {
                 />
               </div>
 
-              {/* Étage — Appartement uniquement */}
-              {form.property_type === 'apartment' && (
+              {/* Étage — appartements */}
+              {rules.floor && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                     <Building2 className="h-3.5 w-3.5" /> Étage
@@ -348,8 +361,8 @@ export default function SellerForm() {
                 </div>
               )}
 
-              {/* Type de maison — Maison / Villa */}
-              {(form.property_type === 'house' || form.property_type === 'villa') && (
+              {/* Type de maison — maisons et villas */}
+              {rules.houseType && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                     <Home className="h-3.5 w-3.5" /> Type de maison
@@ -367,11 +380,11 @@ export default function SellerForm() {
                 </div>
               )}
 
-              {/* Type de local — Commercial */}
-              {form.property_type === 'commercial' && (
+              {/* Type de commerce — immeuble mixte, local commercial */}
+              {rules.commercialType && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Type de local
+                    <Building2 className="h-3.5 w-3.5" /> {rules.units ? 'Type de commerce' : 'Type de local'}
                   </label>
                   <select
                     value={form.commercial_type}
@@ -418,7 +431,7 @@ export default function SellerForm() {
 
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Ruler className="h-3.5 w-3.5" /> Surface (m²)
+                  <Ruler className="h-3.5 w-3.5" /> {rules.surfaceLabel}
                 </label>
                 <input
                   type="number"
@@ -431,20 +444,76 @@ export default function SellerForm() {
                 />
               </div>
 
-              <div>
-                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <DoorOpen className="h-3.5 w-3.5" /> Pièces
-                </label>
-                <input
-                  type="number"
-                  value={form.rooms}
-                  onChange={(e) => update('rooms', e.target.value)}
-                  placeholder="3.5"
-                  step={0.5}
-                  min={1}
-                  className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
-                />
-              </div>
+              {rules.rooms && (
+                <div>
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <DoorOpen className="h-3.5 w-3.5" /> Pièces
+                  </label>
+                  <input
+                    type="number"
+                    value={form.rooms}
+                    onChange={(e) => update('rooms', e.target.value)}
+                    placeholder="3.5"
+                    step={0.5}
+                    min={1}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {rules.units && (
+                <div>
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <Building2 className="h-3.5 w-3.5" /> Nombre d'appartements
+                  </label>
+                  <input
+                    type="number"
+                    value={form.units_count}
+                    onChange={(e) => update('units_count', e.target.value)}
+                    placeholder="6"
+                    min={1}
+                    step={1}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {rules.commercialUnits && (
+                <div>
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <Building2 className="h-3.5 w-3.5" /> Nombre de surfaces commerciales
+                  </label>
+                  <input
+                    type="number"
+                    value={form.commercial_units}
+                    onChange={(e) => update('commercial_units', e.target.value)}
+                    placeholder="1"
+                    min={1}
+                    step={1}
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              {rules.yield && (
+                <div className="col-span-2">
+                  <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                    <BadgeSwissFranc className="h-3.5 w-3.5" /> État locatif annuel (CHF, loyers hors charges)
+                    <span className="text-xs text-slate-500">(facultatif)</span>
+                  </label>
+                  <MoneyInput
+                    value={form.annual_rent}
+                    onChange={(v) => update('annual_rent', v)}
+                    placeholder="41400"
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                  />
+                  <p className="mt-1 text-xs text-slate-400">
+                    {yieldPct !== null
+                      ? `Rendement brut : ${pct(yieldPct)}. Les acheteurs qui cherchent un rendement minimum le voient.`
+                      : 'Permet de calculer le rendement brut, le premier critère des investisseurs.'}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 

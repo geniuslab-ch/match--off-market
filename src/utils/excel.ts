@@ -6,6 +6,8 @@
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType } from '../types';
 import { CANTONS, ROMANDIE_COMMUNES } from '../data/romandieCommunes';
+import { COMMERCIAL_TYPES } from './propertyFields';
+import type { CommercialType } from '../types';
 
 export interface ImportColumn {
   key: string;
@@ -15,7 +17,7 @@ export interface ImportColumn {
   help: string;
   example: string | number | null;
   /** Menu déroulant dans le modèle */
-  list?: 'types' | 'zones' | 'yesno';
+  list?: 'types' | 'zones' | 'yesno' | 'commerce';
   /** Nombre entier de 1 à 5 */
   scale?: boolean;
   /** Montant en CHF (format 1'000) */
@@ -74,6 +76,13 @@ const CANTON_BY_NORM = new Map<string, string>(
 );
 
 export const findType = (raw: string): PropertyType | null => TYPE_BY_NORM.get(norm(raw)) ?? null;
+const COMMERCE_BY_NORM = new Map<string, CommercialType>(
+  COMMERCIAL_TYPES.flatMap(([key, label]) => [
+    [norm(label), key],
+    [norm(key), key],
+  ]),
+);
+export const findCommerce = (raw: string): CommercialType | null => COMMERCE_BY_NORM.get(norm(raw)) ?? null;
 export const findCommune = (raw: string): string | null => COMMUNE_BY_NORM.get(norm(raw)) ?? null;
 /** Commune, ou canton entier si autorisé ; le nom exact utilisé par le matching */
 export const findZone = (raw: string, allowCantons: boolean): string | null =>
@@ -161,9 +170,10 @@ export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
   lists.columns = [
     { header: 'Types de bien', width: 34 },
     { header: spec.allowCantons ? 'Localités et cantons' : 'Localités', width: 30 },
+    { header: 'Types de commerce', width: 20 },
   ];
   for (let i = 0; i < Math.max(TYPE_ENTRIES.length, zones.length); i++) {
-    lists.addRow([TYPE_ENTRIES[i]?.[1] ?? null, zones[i] ?? null]);
+    lists.addRow([TYPE_ENTRIES[i]?.[1] ?? null, zones[i] ?? null, COMMERCIAL_TYPES[i]?.[1] ?? null]);
   }
   lists.getRow(1).font = { bold: true };
 
@@ -183,6 +193,11 @@ export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
         type: 'list', allowBlank: true, formulae: [`Listes!$B$2:$B$${zones.length + 1}`],
         showErrorMessage: true, errorTitle: c.header,
         error: spec.allowCantons ? 'Choisissez une commune ou un canton dans la liste.' : 'Choisissez une commune romande dans la liste.',
+      });
+    } else if (c.list === 'commerce') {
+      dv.add(range, {
+        type: 'list', allowBlank: true, formulae: [`Listes!$C$2:$C$${COMMERCIAL_TYPES.length + 1}`],
+        showErrorMessage: true, errorTitle: c.header, error: 'Choisissez un type dans la liste.',
       });
     } else if (c.list === 'yesno') {
       dv.add(range, { type: 'list', allowBlank: true, formulae: ['"oui,non"'] });

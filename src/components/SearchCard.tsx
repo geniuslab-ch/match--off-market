@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { BadgeCheck, DoorOpen, MapPin, Ruler, Wallet } from 'lucide-react';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { BuyerSearch, SearchCriterion } from '../lib/api';
+import { searchFeatureLabels } from '../utils/propertyFields';
 
 export function surfaceLabel(c: SearchCriterion): string {
   if (c.surface_min > 0 && c.surface_max > 0) return `${c.surface_min} à ${c.surface_max} m²`;
@@ -66,11 +67,11 @@ export default function SearchCard({
               <span className="flex items-center gap-1.5">
                 <Ruler className="h-3.5 w-3.5" /> {surfaceLabel(c)}
               </span>
-              {roomsLabel(c.rooms_min, c.rooms_max) && (
-                <span className="flex items-center gap-1.5">
-                  <DoorOpen className="h-3.5 w-3.5" /> {roomsLabel(c.rooms_min, c.rooms_max)}
+              {searchFeatureLabels(c).map((t) => (
+                <span key={t} className="flex items-center gap-1.5">
+                  <DoorOpen className="h-3.5 w-3.5" /> {t}
                 </span>
-              )}
+              ))}
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" /> {c.zone}
               </span>

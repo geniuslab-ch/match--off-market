@@ -91,6 +91,10 @@ export interface SearchCriterion {
   surface_max: number;
   /** Pièces souhaitées (0 : indifférent) */
   rooms_min?: number;
+  units_min?: number;
+  units_max?: number;
+  commercial_type?: string | null;
+  min_yield?: number;
   rooms_max?: number;
 }
 

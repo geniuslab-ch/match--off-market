@@ -56,7 +56,8 @@ import type {
   ServerMatch,
 } from '../lib/api';
 import Brand, { BRAND_NAME } from './Brand';
-import SearchCard, { roomsLabel } from './SearchCard';
+import SearchCard from './SearchCard';
+import { propertyFeatureLabels, searchFeatureLabels } from '../utils/propertyFields';
 
 // ============================================================
 // Données de démonstration : affichées UNIQUEMENT sur la page /demo,
@@ -277,7 +278,7 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                 <p className="font-semibold text-slate-100">{PROPERTY_TYPE_LABELS[c.desired_property_type]}</p>
               </div>
               <div>
-                <p className="text-slate-400">Surface et pièces</p>
+                <p className="text-slate-400">Caractéristiques</p>
                 <p className="font-semibold text-slate-100">
                   {c.desired_surface_min_m2 > 0 && c.desired_surface_max_m2 > 0
                     ? `${c.desired_surface_min_m2} à ${c.desired_surface_max_m2} m²`
@@ -287,9 +288,16 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                         ? `jusqu'à ${c.desired_surface_max_m2} m²`
                         : 'Toute surface'}
                 </p>
-                {roomsLabel(c.desired_rooms_min, c.desired_rooms_max) && (
-                  <p className="text-slate-400">{roomsLabel(c.desired_rooms_min, c.desired_rooms_max)}</p>
-                )}
+                {searchFeatureLabels({
+                  rooms_min: c.desired_rooms_min,
+                  rooms_max: c.desired_rooms_max,
+                  units_min: c.desired_units_min,
+                  units_max: c.desired_units_max,
+                  commercial_type: c.desired_commercial_type,
+                  min_yield: c.min_gross_yield,
+                }).map((t) => (
+                  <p key={t} className="text-slate-400">{t}</p>
+                ))}
               </div>
             </div>
           ))}
@@ -369,7 +377,9 @@ function MatchCard({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
           <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {property.zone}</span>
           <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" /> {property.surface_m2} m²</span>
-          {property.rooms ? <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5" /> {Number(property.rooms).toLocaleString('fr-CH')} p.</span> : null}
+          {propertyFeatureLabels(property).map((t) => (
+            <span key={t} className="flex items-center gap-1"><Home className="h-3.5 w-3.5" /> {t}</span>
+          ))}
         </div>
 
         <div className="flex items-baseline justify-between">
@@ -391,7 +401,7 @@ function MatchCard({
             <CriteriaBadge ok={details.zone} label="Zone" />
             <CriteriaBadge ok={details.price} label="Prix" />
             <CriteriaBadge ok={details.type} label="Type" />
-            <CriteriaBadge ok={details.surface} label="Surface et pièces" />
+            <CriteriaBadge ok={details.surface} label="Caractéristiques" />
           </div>
         )}
 

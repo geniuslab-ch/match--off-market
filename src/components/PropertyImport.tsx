@@ -4,6 +4,7 @@ import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType } from '../types';
 import { parsePropertyFile, PROPERTY_TEMPLATE } from '../utils/propertyImport';
 import ExcelImportPage from './ExcelImportPage';
+import { propertyFeatureLabels } from '../utils/propertyFields';
 
 const chf = (n: unknown) => `${Number(n).toLocaleString('fr-CH')} CHF`;
 
@@ -28,10 +29,11 @@ export default function PropertyImport() {
         { label: 'Prix', right: true, render: (r) => (r.payload ? chf(r.payload.price) : r.values.price) },
         { label: 'm²', right: true, render: (r) => (r.payload ? String(r.payload.surface_m2) : r.values.surface_m2) },
         {
-          label: 'Pièces',
-          right: true,
+          label: 'Caractéristiques',
           render: (r) =>
-            r.payload ? (r.payload.rooms ? Number(r.payload.rooms).toLocaleString('fr-CH') : '') : r.values.rooms,
+            r.payload
+              ? propertyFeatureLabels(r.payload as Parameters<typeof propertyFeatureLabels>[0]).join(' · ')
+              : [r.values.rooms, r.values.units_count].filter(Boolean).join(' · '),
         },
       ]}
       onImport={async (rows) => {

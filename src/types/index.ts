@@ -42,6 +42,13 @@ export interface SearchCriteria {
   desired_rooms_max?: number | null;
   /** Référence privée (ex. nom du client) : jamais montrée aux vendeurs */
   label?: string | null;
+  /** Immeubles : nombre d'appartements souhaité */
+  desired_units_min?: number | null;
+  desired_units_max?: number | null;
+  /** Immeuble mixte, commercial : type de commerce souhaité (vide : indifférent) */
+  desired_commercial_type?: CommercialType | null;
+  /** Rendement brut minimum en % (immeubles, commercial) */
+  min_gross_yield?: number | null;
 }
 
 export interface BuyerProfile {
@@ -107,6 +114,12 @@ export interface Property {
   price: number;
   surface_m2: number;
   rooms?: number;
+  /** Immeubles : nombre d'appartements */
+  units_count?: number | null;
+  /** Immeuble mixte : nombre de surfaces commerciales */
+  commercial_units?: number | null;
+  /** État locatif annuel en CHF (loyers nets), pour le rendement brut */
+  annual_rent?: number | null;
   image_url?: string;
   floor?: string;
   house_type?: string;
