@@ -76,6 +76,29 @@ export function grossYield(annualRent: number | null | undefined, price: number 
 
 export const pct = (n: number) => `${n.toLocaleString('fr-CH', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %`;
 
+export type FeatureKind = 'rooms' | 'units' | 'commerce' | 'yield';
+
+/** Détails propres au type d'une recherche, avec leur nature (pour choisir une icône) */
+export function searchFeatures(c: {
+  rooms_min?: number | null;
+  rooms_max?: number | null;
+  units_min?: number | null;
+  units_max?: number | null;
+  commercial_type?: string | null;
+  min_yield?: number | null;
+}): { kind: FeatureKind; text: string }[] {
+  const out: { kind: FeatureKind; text: string | null }[] = [
+    { kind: 'rooms', text: rangeLabel(c.rooms_min, c.rooms_max, 'pièce', 'pièces') },
+    { kind: 'units', text: rangeLabel(c.units_min, c.units_max, 'appartement', 'appartements') },
+    {
+      kind: 'commerce',
+      text: c.commercial_type ? `commerce : ${COMMERCIAL_TYPE_LABELS[c.commercial_type as CommercialType] ?? c.commercial_type}` : null,
+    },
+    { kind: 'yield', text: Number(c.min_yield) > 0 ? `rendement brut dès ${pct(Number(c.min_yield))}` : null },
+  ];
+  return out.filter((x): x is { kind: FeatureKind; text: string } => Boolean(x.text));
+}
+
 /** Détails propres au type, pour une recherche (pièces, appartements, commerce, rendement) */
 export function searchFeatureLabels(c: {
   rooms_min?: number | null;

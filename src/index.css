@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* Carrousel : défilement horizontal sans barre visible */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

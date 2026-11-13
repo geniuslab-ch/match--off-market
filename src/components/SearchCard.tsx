@@ -1,8 +1,16 @@
 import type { ReactNode } from 'react';
-import { BadgeCheck, DoorOpen, MapPin, Ruler, Wallet } from 'lucide-react';
+import { BadgeCheck, Building2, DoorOpen, MapPin, Ruler, Store, TrendingUp, Wallet } from 'lucide-react';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { BuyerSearch, SearchCriterion } from '../lib/api';
-import { searchFeatureLabels } from '../utils/propertyFields';
+import { searchFeatures } from '../utils/propertyFields';
+import type { FeatureKind } from '../utils/propertyFields';
+
+const FEATURE_ICONS: Record<FeatureKind, typeof DoorOpen> = {
+  rooms: DoorOpen,
+  units: Building2,
+  commerce: Store,
+  yield: TrendingUp,
+};
 
 export function surfaceLabel(c: SearchCriterion): string {
   if (c.surface_min > 0 && c.surface_max > 0) return `${c.surface_min} à ${c.surface_max} m²`;
@@ -26,7 +34,10 @@ export const budgetLabel = (n: number) => `jusqu'à ${Number(n).toLocaleString('
 
 /** Phrase courte décrivant une recherche, pour les titres et les liens */
 export function searchTitle(c: SearchCriterion): string {
-  return `${PROPERTY_TYPE_LABELS[c.property_type] ?? 'Bien'} à ${c.zone}`;
+  const type = PROPERTY_TYPE_LABELS[c.property_type] ?? 'Bien';
+  // « dans le canton de Vaud » plutôt que « à Canton de Vaud »
+  if (/^canton /i.test(c.zone)) return `${type} dans le ${c.zone.charAt(0).toLowerCase()}${c.zone.slice(1)}`;
+  return `${type} à ${c.zone}`;
 }
 
 // Fiche anonyme d'une recherche d'acheteur : aucune donnée d'identité.
@@ -67,11 +78,14 @@ export default function SearchCard({
               <span className="flex items-center gap-1.5">
                 <Ruler className="h-3.5 w-3.5" /> {surfaceLabel(c)}
               </span>
-              {searchFeatureLabels(c).map((t) => (
-                <span key={t} className="flex items-center gap-1.5">
-                  <DoorOpen className="h-3.5 w-3.5" /> {t}
-                </span>
-              ))}
+              {searchFeatures(c).map(({ kind, text }) => {
+                const Icon = FEATURE_ICONS[kind];
+                return (
+                  <span key={kind} className="flex items-center gap-1.5">
+                    <Icon className="h-3.5 w-3.5" /> {text}
+                  </span>
+                );
+              })}
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" /> {c.zone}
               </span>

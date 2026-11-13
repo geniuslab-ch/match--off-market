@@ -6,6 +6,7 @@ import { getPublicSearches } from '../lib/api';
 import type { BuyerSearch } from '../lib/api';
 import Brand, { BRAND_NAME, DISPLAY_FONT, SLOGAN } from './Brand';
 import SearchCard from './SearchCard';
+import Slider from './Slider';
 
 function Entry({
   icon,
@@ -111,16 +112,22 @@ export default function Landing() {
 
         {/* Recherches en cours */}
         {searches.length > 0 && (
-          <section className="mt-16">
-            <h2 className="text-2xl font-medium text-white sm:text-3xl" style={DISPLAY_FONT}>
-              Ils cherchent en ce moment
-            </h2>
-            <p className="mt-2 text-sm text-slate-400">
-              {searches.length} acheteur{searches.length > 1 ? 's' : ''} qualifié{searches.length > 1 ? 's' : ''}{' '}
-              {searches.length > 1 ? 'ont' : 'a'} une recherche active. Leur identité reste confidentielle.
-            </p>
-            <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-              {searches.slice(0, 6).map((s) => (
+          <div className="mt-16">
+            <Slider
+              label="Acheteurs qui cherchent en ce moment"
+              header={
+                <>
+                  <h2 className="text-2xl font-medium text-white sm:text-3xl" style={DISPLAY_FONT}>
+                    Ils cherchent en ce moment
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    {searches.length} acheteur{searches.length > 1 ? 's' : ''} qualifié{searches.length > 1 ? 's' : ''}{' '}
+                    {searches.length > 1 ? 'ont' : 'a'} une recherche active. Leur identité reste confidentielle.
+                  </p>
+                </>
+              }
+            >
+              {searches.map((s) => (
                 <SearchCard key={s.id} search={s}>
                   <button
                     onClick={() => navigate(`/recherche/${s.id}`)}
@@ -130,8 +137,8 @@ export default function Landing() {
                   </button>
                 </SearchCard>
               ))}
-            </div>
-          </section>
+            </Slider>
+          </div>
         )}
 
         {/* Fonctionnement */}
