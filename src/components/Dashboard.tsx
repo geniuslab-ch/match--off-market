@@ -236,11 +236,6 @@ function BuyerScoreCard({
             </a>
           )}
           {onEdit && (
-            <a href="/buyer/import" className="text-sm text-slate-400 hover:text-cyan-400 hover:underline">
-              Importer depuis Excel
-            </a>
-          )}
-          {onEdit && (
             <button onClick={onEdit} className="text-sm text-cyan-400 hover:underline">
               Mettre à jour
             </button>
@@ -584,9 +579,9 @@ function BuyerView() {
           </button>
           <button
             onClick={() => navigate('/buyer/import')}
-            className="mt-3 flex w-full items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-cyan-400"
+            className="mx-auto mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-600 px-6 py-2.5 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
           >
-            <FileSpreadsheet className="h-4 w-4" /> ou importer des recherches depuis Excel
+            <FileSpreadsheet className="h-4 w-4" /> Importer des recherches depuis Excel
           </button>
         </div>
       </>
@@ -619,6 +614,23 @@ function BuyerView() {
   return (
     <>
       {error && <ErrorBox message={error} />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-slate-100">Mes recherches</h2>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => navigate('/buyer/import')}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Importer depuis Excel
+          </button>
+          <button
+            onClick={() => navigate('/buyer/new')}
+            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
+          >
+            <Plus className="h-4 w-4" /> Ajouter une recherche
+          </button>
+        </div>
+      </div>
       <BuyerScoreCard
         buyer={profile}
         onEdit={() => navigate('/buyer/new')}
