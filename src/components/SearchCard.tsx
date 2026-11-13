@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BadgeCheck, MapPin, Ruler, Wallet } from 'lucide-react';
+import { BadgeCheck, DoorOpen, MapPin, Ruler, Wallet } from 'lucide-react';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { BuyerSearch, SearchCriterion } from '../lib/api';
 
@@ -8,6 +8,17 @@ export function surfaceLabel(c: SearchCriterion): string {
   if (c.surface_min > 0) return `dès ${c.surface_min} m²`;
   if (c.surface_max > 0) return `jusqu'à ${c.surface_max} m²`;
   return 'Toute surface';
+}
+
+/** Libellé du nombre de pièces, ou null si indifférent */
+export function roomsLabel(min?: number | null, max?: number | null): string | null {
+  const lo = Number(min) || 0;
+  const hi = Number(max) || 0;
+  const f = (n: number) => n.toLocaleString('fr-CH');
+  if (lo > 0 && hi > 0) return lo === hi ? `${f(lo)} pièces` : `${f(lo)} à ${f(hi)} pièces`;
+  if (lo > 0) return `dès ${f(lo)} pièces`;
+  if (hi > 0) return `jusqu'à ${f(hi)} pièces`;
+  return null;
 }
 
 export const budgetLabel = (n: number) => `jusqu'à ${Number(n).toLocaleString('fr-CH')} CHF`;
@@ -55,6 +66,11 @@ export default function SearchCard({
               <span className="flex items-center gap-1.5">
                 <Ruler className="h-3.5 w-3.5" /> {surfaceLabel(c)}
               </span>
+              {roomsLabel(c.rooms_min, c.rooms_max) && (
+                <span className="flex items-center gap-1.5">
+                  <DoorOpen className="h-3.5 w-3.5" /> {roomsLabel(c.rooms_min, c.rooms_max)}
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <MapPin className="h-3.5 w-3.5" /> {c.zone}
               </span>

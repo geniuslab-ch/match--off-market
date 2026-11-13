@@ -89,6 +89,9 @@ export interface SearchCriterion {
   budget_max: number;
   surface_min: number;
   surface_max: number;
+  /** Pièces souhaitées (0 : indifférent) */
+  rooms_min?: number;
+  rooms_max?: number;
 }
 
 /** Recherche d'un acheteur qualifié, sans aucune donnée d'identité */

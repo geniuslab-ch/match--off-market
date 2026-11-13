@@ -37,6 +37,9 @@ export interface SearchCriteria {
   desired_surface_max_m2: number;
   /** Apport prévu pour cette recherche (facultatif). Vide : on prend l'apport général du profil. */
   personal_contribution?: number | null;
+  /** Nombre de pièces souhaité (facultatif, ex. 3.5) */
+  desired_rooms_min?: number | null;
+  desired_rooms_max?: number | null;
 }
 
 export interface BuyerProfile {

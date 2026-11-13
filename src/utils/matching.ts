@@ -130,7 +130,7 @@ export function isSellerQualified(_property: Property): boolean {
 // Zone OK                          → +20
 // Prix <= Budget                   → +30
 // Type de bien OK                  → +20
-// Surface dans fourchette          → +10
+// Surface et pièces dans fourchette → +10 (pièces : seulement si renseignées des deux côtés)
 // + (Score Acheteur * 0.1)         → jusqu'à +10
 // + (Score Vendeur * 0.1)          → jusqu'à +10
 // Match si Score Global >= 70
@@ -173,6 +173,21 @@ function checkSurfaceMatch(
   return true;
 }
 
+// Vérifie le nombre de pièces. Doit rester identique au calcul de private.match_details().
+export function checkRoomsMatch(
+  propertyRooms: number | null | undefined,
+  minRooms: number | null | undefined,
+  maxRooms: number | null | undefined
+): boolean {
+  const rooms = Number(propertyRooms) || 0;
+  if (rooms <= 0) return true;
+  const min = Number(minRooms) || 0;
+  const max = Number(maxRooms) || 0;
+  if (min > 0 && rooms < min) return false;
+  if (max > 0 && rooms > max) return false;
+  return true;
+}
+
 // Match avec un critère de recherche spécifique
 function calculateMatchWithCriteria(
   buyer: BuyerProfile,
@@ -200,12 +215,10 @@ function calculateMatchWithCriteria(
   const typeMatch = typeFamily(criteria.desired_property_type) === typeFamily(property.property_type);
   if (typeMatch) matchScore += 20;
 
-  // Surface dans fourchette (+10)
-  const surfaceMatch = checkSurfaceMatch(
-    property.surface_m2,
-    criteria.desired_surface_min_m2,
-    criteria.desired_surface_max_m2
-  );
+  // Surface et pièces dans la fourchette (+10). Un bien sans nombre de pièces n'est pas pénalisé.
+  const surfaceMatch =
+    checkSurfaceMatch(property.surface_m2, criteria.desired_surface_min_m2, criteria.desired_surface_max_m2) &&
+    checkRoomsMatch(property.rooms, criteria.desired_rooms_min, criteria.desired_rooms_max);
   if (surfaceMatch) matchScore += 10;
 
   // Bonus scores

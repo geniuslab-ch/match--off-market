@@ -25,6 +25,7 @@ import {
   Users,
   XCircle,
   Zap,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { BuyerProfile, Property } from '../types';
 import { PROPERTY_TYPE_LABELS } from '../types';
@@ -55,7 +56,7 @@ import type {
   ServerMatch,
 } from '../lib/api';
 import Brand, { BRAND_NAME } from './Brand';
-import SearchCard from './SearchCard';
+import SearchCard, { roomsLabel } from './SearchCard';
 
 // ============================================================
 // Données de démonstration : affichées UNIQUEMENT sur la page /demo,
@@ -271,7 +272,7 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                 <p className="font-semibold text-slate-100">{PROPERTY_TYPE_LABELS[c.desired_property_type]}</p>
               </div>
               <div>
-                <p className="text-slate-400">Surface</p>
+                <p className="text-slate-400">Surface et pièces</p>
                 <p className="font-semibold text-slate-100">
                   {c.desired_surface_min_m2 > 0 && c.desired_surface_max_m2 > 0
                     ? `${c.desired_surface_min_m2} à ${c.desired_surface_max_m2} m²`
@@ -281,6 +282,9 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
                         ? `jusqu'à ${c.desired_surface_max_m2} m²`
                         : 'Toute surface'}
                 </p>
+                {roomsLabel(c.desired_rooms_min, c.desired_rooms_max) && (
+                  <p className="text-slate-400">{roomsLabel(c.desired_rooms_min, c.desired_rooms_max)}</p>
+                )}
               </div>
             </div>
           ))}
@@ -360,7 +364,7 @@ function MatchCard({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
           <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {property.zone}</span>
           <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" /> {property.surface_m2} m²</span>
-          {property.rooms ? <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5" /> {property.rooms} p.</span> : null}
+          {property.rooms ? <span className="flex items-center gap-1"><Home className="h-3.5 w-3.5" /> {Number(property.rooms).toLocaleString('fr-CH')} p.</span> : null}
         </div>
 
         <div className="flex items-baseline justify-between">
@@ -382,7 +386,7 @@ function MatchCard({
             <CriteriaBadge ok={details.zone} label="Zone" />
             <CriteriaBadge ok={details.price} label="Prix" />
             <CriteriaBadge ok={details.type} label="Type" />
-            <CriteriaBadge ok={details.surface} label="Surface" />
+            <CriteriaBadge ok={details.surface} label="Surface et pièces" />
           </div>
         )}
 
@@ -1089,12 +1093,20 @@ function SellerView() {
               Ils ne sont visibles que des acheteurs qualifiés dont la recherche correspond.
             </p>
           </div>
-          <button
-            onClick={() => navigate('/seller/new')}
-            className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
-          >
-            <Plus className="h-4 w-4" /> Ajouter un bien
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => navigate('/seller/import')}
+              className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
+            >
+              <FileSpreadsheet className="h-4 w-4" /> Importer depuis Excel
+            </button>
+            <button
+              onClick={() => navigate('/seller/new')}
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
+            >
+              <Plus className="h-4 w-4" /> Ajouter un bien
+            </button>
+          </div>
         </div>
 
         {properties.length === 0 ? (

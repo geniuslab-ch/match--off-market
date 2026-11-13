@@ -8,6 +8,7 @@ import Landing from './components/Landing';
 import SearchPreview from './components/SearchPreview';
 import Admin from './components/Admin';
 import Privacy from './components/Privacy';
+import PropertyImport from './components/PropertyImport';
 import type { ReactNode } from 'react';
 
 // Route protégée : redirige vers /auth si non connecté
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/buyer/new" element={<PrivateRoute><BuyerForm /></PrivateRoute>} />
       <Route path="/seller/new" element={<PrivateRoute><SellerForm /></PrivateRoute>} />
       <Route path="/seller/edit/:id" element={<PrivateRoute><SellerForm key="edit" /></PrivateRoute>} />
+      <Route path="/seller/import" element={<PrivateRoute><PropertyImport /></PrivateRoute>} />
 
       {/* Dashboard connecté */}
       <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />

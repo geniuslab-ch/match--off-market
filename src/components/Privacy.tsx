@@ -141,7 +141,7 @@ export default function Privacy() {
             <li>
               Si vous l'acceptez (option activée par défaut, modifiable à tout moment dans votre profil), votre
               recherche est visible des vendeurs et sur une page publique, sous forme anonyme : localité, type de bien,
-              surface, budget arrondi aux 50 000 CHF supérieurs et mention d'une pré-approbation déclarée. Votre
+              surface, nombre de pièces, budget arrondi aux 50 000 CHF supérieurs et mention d'une pré-approbation déclarée. Votre
               apport, votre endettement et votre identité n'y figurent jamais.
             </li>
             <li>Les vendeurs voient le pseudo et le score des acheteurs qui leur adressent une demande.</li>
