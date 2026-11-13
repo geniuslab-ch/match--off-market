@@ -223,6 +223,11 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
             </a>
           )}
           {onEdit && (
+            <a href="/buyer/import" className="text-sm text-slate-400 hover:text-cyan-400 hover:underline">
+              Importer depuis Excel
+            </a>
+          )}
+          {onEdit && (
             <button onClick={onEdit} className="text-sm text-cyan-400 hover:underline">
               Mettre à jour
             </button>
@@ -255,7 +260,7 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
           {criteria.map((c, i) => (
             <div key={i} className="grid grid-cols-2 gap-3 rounded-lg bg-slate-900 p-3 text-center text-xs sm:grid-cols-4">
               <div>
-                <p className="text-slate-400">Recherche {i + 1}</p>
+                <p className="text-slate-400">{c.label ? c.label : `Recherche ${i + 1}`}</p>
                 <p className="font-semibold text-cyan-400">{c.desired_zone}</p>
               </div>
               <div>
@@ -543,6 +548,12 @@ function BuyerView() {
             className="mt-4 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-cyan-500"
           >
             Créer mon profil acheteur
+          </button>
+          <button
+            onClick={() => navigate('/buyer/import')}
+            className="mt-3 flex w-full items-center justify-center gap-1.5 text-sm text-slate-400 hover:text-cyan-400"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> ou importer des recherches depuis Excel
           </button>
         </div>
       </>

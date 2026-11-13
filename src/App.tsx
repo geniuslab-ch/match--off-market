@@ -9,6 +9,7 @@ import SearchPreview from './components/SearchPreview';
 import Admin from './components/Admin';
 import Privacy from './components/Privacy';
 import PropertyImport from './components/PropertyImport';
+import SearchImport from './components/SearchImport';
 import type { ReactNode } from 'react';
 
 // Route protégée : redirige vers /auth si non connecté
@@ -42,6 +43,7 @@ function AppRoutes() {
 
       {/* Formulaires protégés */}
       <Route path="/buyer/new" element={<PrivateRoute><BuyerForm /></PrivateRoute>} />
+      <Route path="/buyer/import" element={<PrivateRoute><SearchImport /></PrivateRoute>} />
       <Route path="/seller/new" element={<PrivateRoute><SellerForm /></PrivateRoute>} />
       <Route path="/seller/edit/:id" element={<PrivateRoute><SellerForm key="edit" /></PrivateRoute>} />
       <Route path="/seller/import" element={<PrivateRoute><PropertyImport /></PrivateRoute>} />

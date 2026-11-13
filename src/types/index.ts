@@ -40,6 +40,8 @@ export interface SearchCriteria {
   /** Nombre de pièces souhaité (facultatif, ex. 3.5) */
   desired_rooms_min?: number | null;
   desired_rooms_max?: number | null;
+  /** Référence privée (ex. nom du client) : jamais montrée aux vendeurs */
+  label?: string | null;
 }
 
 export interface BuyerProfile {

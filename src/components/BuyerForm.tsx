@@ -17,6 +17,8 @@ import {
   Check,
   ChevronRight,
   DoorOpen,
+  Tag,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
@@ -39,6 +41,8 @@ interface CriteriaForm {
   /** Pièces souhaitées (vide : indifférent) */
   desired_rooms_min: string;
   desired_rooms_max: string;
+  /** Référence privée (ex. nom du client) */
+  label: string;
 }
 
 // Nombres de pièces proposés (usage suisse : demi-pièces)
@@ -55,6 +59,7 @@ function newCriteria(): CriteriaForm {
     personal_contribution: '',
     desired_rooms_min: '',
     desired_rooms_max: '',
+    label: '',
   };
 }
 
@@ -109,6 +114,7 @@ export default function BuyerForm() {
                   Number(c.personal_contribution) > 0 ? String(Math.round(Number(c.personal_contribution))) : '',
                 desired_rooms_min: Number(c.desired_rooms_min) > 0 ? String(c.desired_rooms_min) : '',
                 desired_rooms_max: Number(c.desired_rooms_max) > 0 ? String(c.desired_rooms_max) : '',
+                label: c.label ?? '',
               }))
             : [
                 {
@@ -120,6 +126,7 @@ export default function BuyerForm() {
                   personal_contribution: '',
                   desired_rooms_min: '',
                   desired_rooms_max: '',
+                  label: '',
                 },
               ],
         );
@@ -253,6 +260,7 @@ export default function BuyerForm() {
         personal_contribution: Number(c.personal_contribution) > 0 ? Number(c.personal_contribution) : null,
         desired_rooms_min: Number(c.desired_rooms_min) > 0 ? Number(c.desired_rooms_min) : null,
         desired_rooms_max: Number(c.desired_rooms_max) > 0 ? Number(c.desired_rooms_max) : null,
+        label: c.label.trim() || null,
       })),
     };
 
@@ -334,6 +342,12 @@ export default function BuyerForm() {
           <p className="mt-1 text-slate-400">
             Complétez vos critères pour accéder aux biens off-market
           </p>
+          <a
+            href="/buyer/import"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-cyan-400 hover:underline"
+          >
+            <FileSpreadsheet className="h-4 w-4" /> Plusieurs recherches à saisir ? Importez-les depuis Excel
+          </a>
         </div>
 
         {/* Score en temps réel */}
@@ -414,7 +428,7 @@ export default function BuyerForm() {
                   {done ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
                 Recherche {i + 1}
-                {done && <span className="hidden text-slate-500 sm:inline">· {c.desired_zone}</span>}
+                {done && <span className="hidden text-slate-500 sm:inline">· {c.label.trim() || c.desired_zone}</span>}
               </button>
             );
           })}
@@ -473,6 +487,22 @@ export default function BuyerForm() {
                     </button>
                   )}
                 </div>
+              </div>
+
+              {/* Référence privée */}
+              <div>
+                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                  <Tag className="h-3.5 w-3.5" /> Référence
+                  <span className="text-xs text-slate-500">(facultatif, visible de vous seul)</span>
+                </label>
+                <input
+                  type="text"
+                  value={criteria.label}
+                  onChange={(e) => updateCriteria(index, 'label', e.target.value)}
+                  placeholder="Ex. nom du client, ou « résidence principale »"
+                  maxLength={60}
+                  className={inputCls}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
