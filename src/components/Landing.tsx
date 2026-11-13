@@ -65,6 +65,10 @@ export default function Landing() {
     };
   }, []);
 
+  // Une carte par recherche (un acheteur peut en avoir plusieurs), pour que le carrousel
+  // montre chaque besoin séparément ; le lien mène à la fiche de l'acheteur.
+  const slides = searches.flatMap((s) => s.criteria.map((c, i) => ({ key: `${s.id}-${i}`, search: { ...s, criteria: [c] } })));
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
@@ -121,14 +125,15 @@ export default function Landing() {
                     Ils cherchent en ce moment
                   </h2>
                   <p className="mt-2 text-sm text-slate-400">
-                    {searches.length} acheteur{searches.length > 1 ? 's' : ''} qualifié{searches.length > 1 ? 's' : ''}{' '}
-                    {searches.length > 1 ? 'ont' : 'a'} une recherche active. Leur identité reste confidentielle.
+                    {slides.length} recherche{slides.length > 1 ? 's' : ''} active{slides.length > 1 ? 's' : ''} de{' '}
+                    {searches.length} acheteur{searches.length > 1 ? 's' : ''} qualifié{searches.length > 1 ? 's' : ''}. Leur
+                    identité reste confidentielle.
                   </p>
                 </>
               }
             >
-              {searches.map((s) => (
-                <SearchCard key={s.id} search={s}>
+              {slides.map(({ key, search: s }) => (
+                <SearchCard key={key} search={s}>
                   <button
                     onClick={() => navigate(`/recherche/${s.id}`)}
                     className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-600 py-2.5 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
