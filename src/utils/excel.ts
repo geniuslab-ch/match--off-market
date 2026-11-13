@@ -58,6 +58,34 @@ export const norm = (v: unknown) =>
     .trim()
     .toLowerCase();
 
+/** Clé de comparaison pour repérer les doublons (texte normalisé, nombres arrondis) */
+export const dupKey = (...parts: unknown[]) =>
+  parts.map((x) => (typeof x === 'number' ? String(Math.round(x)) : norm(x))).join('|');
+
+/**
+ * Marque comme erreurs les lignes en double : déjà enregistrées (existing) ou répétées
+ * plus haut dans le fichier. Les lignes déjà en erreur ne sont pas comparées.
+ */
+export function markDuplicates(
+  rows: ImportedRow[],
+  keyOf: (payload: Record<string, unknown>) => string,
+  existing: Map<string, string>,
+): ImportedRow[] {
+  const seen = new Map<string, number>();
+  return rows.map((r) => {
+    if (!r.payload) return r;
+    const k = keyOf(r.payload);
+    const already = existing.get(k);
+    if (already !== undefined) {
+      return { ...r, payload: null, errors: [`doublon : déjà enregistré${already ? ` (« ${already} »)` : ''}`] };
+    }
+    const first = seen.get(k);
+    if (first !== undefined) return { ...r, payload: null, errors: [`doublon de la ligne ${first}`] };
+    seen.set(k, r.line);
+    return r;
+  });
+}
+
 export const TYPE_ENTRIES = Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][];
 const TYPE_BY_NORM = new Map<string, PropertyType>(
   TYPE_ENTRIES.flatMap(([key, label]) => [

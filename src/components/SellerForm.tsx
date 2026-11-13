@@ -18,6 +18,7 @@ import {
   Car,
   TreePine,
   Sparkles,
+  Tag,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
@@ -36,10 +37,13 @@ import type { PropertyType, SituationType, HouseType, CommercialType, Property }
 import CommuneSelect from './CommuneSelect';
 import MoneyInput from './MoneyInput';
 import { fieldRules, grossYield, pct } from '../utils/propertyFields';
+import { propertyKey } from '../utils/propertyImport';
 import Brand from './Brand';
 
 export default function SellerForm() {
   const { user } = useAuth();
+  const isPro = Boolean(user?.is_professional);
+  const [dupConfirmed, setDupConfirmed] = useState(false);
   const navigate = useNavigate();
   // /seller/edit/:id : modification d'un bien existant ; /seller/new : nouveau bien
   const { id: editId } = useParams();
@@ -54,6 +58,7 @@ export default function SellerForm() {
     rooms: '',
     units_count: '',
     commercial_units: '',
+    client_ref: '',
     annual_rent: '',
     floor: '',
     house_type: '' as HouseType | '',
@@ -100,6 +105,7 @@ export default function SellerForm() {
             surface_m2: str(p.surface_m2),
             rooms: str(p.rooms),
             units_count: str(p.units_count),
+            client_ref: str(p.client_ref),
             commercial_units: str(p.commercial_units),
             annual_rent: p.annual_rent != null ? String(Math.round(Number(p.annual_rent))) : '',
             floor: str(p.floor),
@@ -175,6 +181,20 @@ export default function SellerForm() {
     }
 
     setError(null);
+
+    // Doublon : un de vos biens a déjà le même titre, la même localité et le même prix.
+    // Premier clic : avertissement ; second clic : enregistrement quand même.
+    if (!editId && !dupConfirmed) {
+      const { data } = await supabase.from('properties').select('title, zone, price').eq('seller_id', user.id);
+      const k = propertyKey(form);
+      const twin = (data ?? []).find((p) => propertyKey(p) === k);
+      if (twin) {
+        setDupConfirmed(true);
+        setError(`Doublon possible : vous avez déjà publié « ${twin.title} » à ${twin.zone} au même prix. Cliquez à nouveau sur Publier pour l'enregistrer quand même.`);
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -204,6 +224,7 @@ export default function SellerForm() {
       payload.house_type = rules.houseType && form.house_type ? form.house_type : null;
       payload.commercial_type = rules.commercialType && form.commercial_type ? form.commercial_type : null;
       payload.situation = form.situation || null;
+      if (isPro) payload.client_ref = form.client_ref.trim().slice(0, 80) || null;
       payload.exterior = form.exterior.length > 0 ? form.exterior : null;
       payload.parking_types = form.parking_types.length > 0 ? form.parking_types : null;
       payload.parking_quantity = form.parking_types.length > 0 ? Number(form.parking_quantity) || 1 : null;
@@ -302,6 +323,23 @@ export default function SellerForm() {
                 className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
               />
             </div>
+
+            {isPro && (
+              <div>
+                <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
+                  <Tag className="h-3.5 w-3.5" /> Référence client / mandant
+                  <span className="text-xs text-slate-500">(facultatif, visible de vous seul)</span>
+                </label>
+                <input
+                  type="text"
+                  value={form.client_ref}
+                  onChange={(e) => update('client_ref', e.target.value)}
+                  placeholder="N° de client ou nom du mandant"
+                  maxLength={80}
+                  className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
+                />
+              </div>
+            )}
 
             <div>
               <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BadgeSwissFranc,
@@ -146,6 +146,8 @@ export default function BuyerForm() {
   const [success, setSuccess] = useState(false);
   // Chargement du profil existant, pour que « Mettre à jour » reparte des données enregistrées
   const [loadingProfile, setLoadingProfile] = useState(true);
+  // Recherches marquées « acheté » : conservées telles quelles à l'enregistrement
+  const purchasedRef = useRef<SearchCriteria[]>([]);
   // Étape affichée : 0..n-1 = recherches, n = financement
   const [step, setStep] = useState(0);
   // Message bref après l'enregistrement d'une étape
@@ -163,7 +165,10 @@ export default function BuyerForm() {
       if (!alive) return;
       if (data) {
         const p = data as BuyerProfile;
-        const saved = p.search_criteria && p.search_criteria.length > 0 ? p.search_criteria : null;
+        // Les recherches achetées (historique) ne sont pas modifiables ici, mais sont conservées
+        purchasedRef.current = (p.search_criteria ?? []).filter((c) => c.purchased_at);
+        const active = (p.search_criteria ?? []).filter((c) => !c.purchased_at);
+        const saved = active.length > 0 ? active : null;
         setCriteriaList(
           saved
             ? saved.map(fromSaved)
@@ -252,6 +257,10 @@ export default function BuyerForm() {
     const minU = Number(c.desired_units_min);
     const maxU = Number(c.desired_units_max);
     if (minU && maxU && minU > maxU) return `Recherche ${i + 1} : le nombre d'appartements min ne peut pas dépasser le max.`;
+    // Doublon : même zone, type, budget et référence qu'une recherche précédente
+    const key = (x: CriteriaForm) => [x.desired_zone, x.desired_property_type, Number(x.budget_max) || 0, x.label.trim().toLowerCase()].join('|');
+    const twin = criteriaList.findIndex((x, j) => j < i && key(x) === key(c));
+    if (twin >= 0) return `Recherche ${i + 1} : identique à la recherche ${twin + 1}. Modifiez-la ou ajoutez une référence.`;
     const y = Number(c.min_gross_yield);
     if (c.min_gross_yield && (Number.isNaN(y) || y < 0 || y > 30)) return `Recherche ${i + 1} : rendement brut entre 0 et 30 %.`;
     return null;
@@ -293,7 +302,7 @@ export default function BuyerForm() {
       debt_ratio: financials.debt_ratio === '' ? null : Number(financials.debt_ratio),
       score: liveScore,
       share_search: shareSearch,
-      search_criteria: ready.map(toSaved),
+      search_criteria: [...ready.map(toSaved), ...purchasedRef.current],
     };
 
     const { error: err } = await supabase.from('buyer_profiles').upsert(payload, { onConflict: 'user_id' });

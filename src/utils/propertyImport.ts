@@ -1,11 +1,12 @@
 // Import de biens à vendre depuis Excel (page /seller/import)
 import { calculateSellerScore } from './matching';
-import { findCommerce, findCommune, findType, parseNumber, parseYesNo, readSheet } from './excel';
+import { dupKey, findCommerce, findCommune, findType, parseNumber, parseYesNo, readSheet } from './excel';
 import { fieldRules } from './propertyFields';
 import type { ImportColumn, ImportedRow, TemplateSpec } from './excel';
 
 export const PROPERTY_COLUMNS: ImportColumn[] = [
   { key: 'title', header: 'Titre', width: 34, required: true, help: 'Titre court du bien.', example: 'Appartement lumineux avec balcon' },
+  { key: 'client_ref', header: 'Référence client / mandant', width: 22, help: 'Facultatif. N° de client ou nom du mandant. Visible de vous seul, jamais des acheteurs.', example: 'Mandat 2026-014' },
   { key: 'property_type', header: 'Type de bien', width: 30, required: true, list: 'types', help: 'Choisir dans la liste.', example: 'Appartement en PPE' },
   { key: 'zone', header: 'Localité', width: 24, required: true, list: 'zones', help: 'Commune romande, choisir dans la liste.', example: 'Lausanne' },
   { key: 'price', header: 'Prix (CHF)', width: 14, required: true, money: true, help: 'Prix de vente en CHF, sans décimales.', example: 890000 },
@@ -30,14 +31,18 @@ export const PROPERTY_TEMPLATE: TemplateSpec = {
   maxRows: 300,
   examples: [
     PROPERTY_COLUMNS.map((c) => c.example),
-    ['Villa familiale avec jardin', 'Villa', 'Pully', 1950000, 190, 6.5, null, null, null, null, 'Calme, proche des écoles.', 4, 90, 'oui', "Achat d'un autre bien en cours", 5],
-    ['Immeuble mixte au centre', 'Immeuble de rendement mixte', 'Sion', 2400000, 520, null, 6, 1, 'Commerce', 118000, 'Entièrement loué.', 3, 0, 'non', null, 4],
+    ['Villa familiale avec jardin', 'M. et Mme Favre', 'Villa', 'Pully', 1950000, 190, 6.5, null, null, null, null, 'Calme, proche des écoles.', 4, 90, 'oui', "Achat d'un autre bien en cours", 5],
+    ['Immeuble mixte au centre', 'Client 1042', 'Immeuble de rendement mixte', 'Sion', 2400000, 520, null, 6, 1, 'Commerce', 118000, 'Entièrement loué.', 3, 0, 'non', null, 4],
   ],
   notes: [
     'Une ligne par bien. Les biens importés sont actifs tout de suite et visibles des acheteurs qualifiés dont la recherche correspond.',
     "Les colonnes qui ne concernent pas le type de bien sont ignorées (ex. pièces pour un immeuble, nombre d'appartements pour une villa).",
   ],
 };
+
+/** Un bien est un doublon s'il a le même titre, la même localité et le même prix */
+export const propertyKey = (p: { title?: unknown; zone?: unknown; price?: unknown }) =>
+  dupKey(p.title, p.zone, Number(p.price) || 0);
 
 export async function parsePropertyFile(file: File): Promise<ImportedRow[]> {
   return (await readSheet(file, PROPERTY_TEMPLATE)).map(({ line, values }) => validateProperty(line, values));
@@ -110,6 +115,7 @@ function validateProperty(line: number, v: Record<string, string>): ImportedRow 
 
   const payload: Record<string, unknown> = {
     title,
+    client_ref: (v.client_ref ?? '').trim().slice(0, 80) || null,
     description: (v.description ?? '').trim() || null,
     property_type: type,
     zone,

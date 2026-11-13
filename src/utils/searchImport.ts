@@ -1,6 +1,6 @@
 // Import de recherches d'acheteurs depuis Excel (page /buyer/import)
 // Chaque ligne devient une recherche du profil acheteur connecté.
-import { findCommerce, findType, findZone, parseNumber, readSheet } from './excel';
+import { dupKey, findCommerce, findType, findZone, parseNumber, readSheet } from './excel';
 import { fieldRules } from './propertyFields';
 import type { ImportColumn, ImportedRow, TemplateSpec } from './excel';
 
@@ -36,6 +36,10 @@ export const SEARCH_TEMPLATE: TemplateSpec = {
     'Les vendeurs ne voient jamais la référence ni l\'apport : seulement la zone, le type, la surface, les pièces et un budget arrondi.',
   ],
 };
+
+/** Une recherche est un doublon si zone, type, budget et référence sont identiques */
+export const searchKey = (c: { desired_zone?: unknown; desired_property_type?: unknown; budget_max?: unknown; label?: unknown }) =>
+  dupKey(c.desired_zone, c.desired_property_type, Number(c.budget_max) || 0, c.label ?? '');
 
 export async function parseSearchFile(file: File): Promise<ImportedRow[]> {
   return (await readSheet(file, SEARCH_TEMPLATE)).map(({ line, values }) => validateSearch(line, values));

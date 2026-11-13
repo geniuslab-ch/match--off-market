@@ -2,7 +2,8 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType } from '../types';
-import { parsePropertyFile, PROPERTY_TEMPLATE } from '../utils/propertyImport';
+import { parsePropertyFile, PROPERTY_TEMPLATE, propertyKey } from '../utils/propertyImport';
+import { markDuplicates } from '../utils/excel';
 import ExcelImportPage from './ExcelImportPage';
 import { propertyFeatureLabels } from '../utils/propertyFields';
 
@@ -18,9 +19,19 @@ export default function PropertyImport() {
       intro={`Ajoutez tout votre portefeuille en une fois : une ligne par bien, jusqu'à ${PROPERTY_TEMPLATE.maxRows} biens.`}
       template={PROPERTY_TEMPLATE}
       thing={['bien', 'biens']}
-      parse={parsePropertyFile}
+      parse={async (file) => {
+        const rows = await parsePropertyFile(file);
+        // Doublons : biens déjà publiés par ce compte, ou lignes répétées dans le fichier
+        const existing = new Map<string, string>();
+        if (supabase && user) {
+          const { data } = await supabase.from('properties').select('title, zone, price').eq('seller_id', user.id);
+          (data ?? []).forEach((p) => existing.set(propertyKey(p), String(p.title ?? '')));
+        }
+        return markDuplicates(rows, propertyKey, existing);
+      }}
       preview={[
         { label: 'Titre', render: (r) => r.values.title },
+        { label: 'Réf.', render: (r) => r.values.client_ref },
         {
           label: 'Type',
           render: (r) => (r.payload ? PROPERTY_TYPE_LABELS[r.payload.property_type as PropertyType] : r.values.property_type),

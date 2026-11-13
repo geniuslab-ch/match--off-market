@@ -4,7 +4,8 @@ import { useAuth } from '../lib/AuthContext';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { BuyerProfile, PropertyType, SearchCriteria } from '../types';
 import { calculateBuyerScore } from '../utils/matching';
-import { parseSearchFile, SEARCH_TEMPLATE } from '../utils/searchImport';
+import { parseSearchFile, SEARCH_TEMPLATE, searchKey } from '../utils/searchImport';
+import { markDuplicates } from '../utils/excel';
 import ExcelImportPage from './ExcelImportPage';
 import { searchFeatureLabels } from '../utils/propertyFields';
 
@@ -27,7 +28,18 @@ export default function SearchImport() {
       }
       template={SEARCH_TEMPLATE}
       thing={['recherche', 'recherches']}
-      parse={parseSearchFile}
+      parse={async (file) => {
+        const rows = await parseSearchFile(file);
+        // Doublons : recherches actives déjà dans le profil, ou lignes répétées dans le fichier
+        const existing = new Map<string, string>();
+        if (supabase && user) {
+          const { data } = await supabase.from('buyer_profiles').select('search_criteria').eq('user_id', user.id).maybeSingle();
+          ((data?.search_criteria as SearchCriteria[] | null) ?? [])
+            .filter((c) => !c.purchased_at)
+            .forEach((c) => existing.set(searchKey(c), c.label || c.desired_zone));
+        }
+        return markDuplicates(rows, searchKey, existing);
+      }}
       preview={[
         { label: 'Référence', render: (r) => r.values.label },
         { label: 'Zone', render: (r) => (r.payload ? String(r.payload.desired_zone) : r.values.desired_zone) },
@@ -102,9 +114,11 @@ export default function SearchImport() {
 
         const current = (existing as BuyerProfile | null) ?? null;
         const imported = rows.map((r) => r.payload as unknown as SearchCriteria);
-        const kept = mode === 'add' && current?.search_criteria?.length ? current.search_criteria : [];
+        // L'historique (recherches achetées) est toujours conservé, même en mode « remplacer »
+        const previous = current?.search_criteria ?? [];
+        const kept = mode === 'add' ? previous : previous.filter((c) => c.purchased_at);
         const criteria = [...kept, ...imported];
-        const primary = criteria[0];
+        const primary = criteria.find((c) => !c.purchased_at) ?? criteria[0];
 
         const profile = {
           personal_contribution: current?.personal_contribution ?? 0,

@@ -40,8 +40,9 @@ const MATCH_SCORE_THRESHOLD = 70;
 
 /** Critères de recherche d'un acheteur, sous forme de liste (ancien format : un seul critère) */
 export function buyerCriteria(buyer: BuyerProfile): SearchCriteria[] {
+  // Les recherches marquées « acheté » ne participent plus au matching
   return buyer.search_criteria && buyer.search_criteria.length > 0
-    ? buyer.search_criteria
+    ? buyer.search_criteria.filter((c) => !c.purchased_at)
     : [{
         desired_zone: buyer.desired_zone,
         desired_property_type: buyer.desired_property_type,

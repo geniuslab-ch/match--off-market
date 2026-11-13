@@ -49,6 +49,8 @@ export interface SearchCriteria {
   desired_commercial_type?: CommercialType | null;
   /** Rendement brut minimum en % (immeubles, commercial) */
   min_gross_yield?: number | null;
+  /** Date d'achat (professionnels) : la recherche quitte le matching et passe dans l'historique */
+  purchased_at?: string | null;
 }
 
 export interface BuyerProfile {
@@ -120,6 +122,10 @@ export interface Property {
   commercial_units?: number | null;
   /** État locatif annuel en CHF (loyers nets), pour le rendement brut */
   annual_rent?: number | null;
+  /** Référence privée du professionnel : n° de client ou nom du mandant (jamais montrée aux acheteurs) */
+  client_ref?: string | null;
+  /** Date de vente (professionnels) : le bien quitte le réseau et passe dans l'historique */
+  sold_at?: string | null;
   image_url?: string;
   floor?: string;
   house_type?: string;

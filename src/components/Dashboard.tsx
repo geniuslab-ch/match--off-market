@@ -26,6 +26,7 @@ import {
   XCircle,
   Zap,
   FileSpreadsheet,
+  History,
 } from 'lucide-react';
 import type { BuyerProfile, Property } from '../types';
 import { PROPERTY_TYPE_LABELS } from '../types';
@@ -197,10 +198,21 @@ function CriteriaBadge({ ok, label }: { ok: boolean; label: string }) {
 // ============================================================
 // Carte du profil acheteur
 // ============================================================
-function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () => void }) {
+function BuyerScoreCard({
+  buyer,
+  onEdit,
+  onPurchased,
+}: {
+  buyer: BuyerProfile;
+  onEdit?: () => void;
+  /** Professionnels : marque une recherche comme achetée (index dans search_criteria) */
+  onPurchased?: (index: number) => void;
+}) {
   const score = calculateBuyerScore(buyer);
   const qualified = isBuyerQualified(buyer);
-  const criteria = buyer.search_criteria ?? [];
+  // Recherches actives seulement ; les achetées sont dans l'historique
+  const indexed = (buyer.search_criteria ?? []).map((c, index) => ({ c, index })).filter(({ c }) => !c.purchased_at);
+  const criteria = indexed.map(({ c }) => c);
   // Part de l'apport dans le budget, recherche par recherche (apport propre ou, à défaut, apport général)
   const pctOf = (c: (typeof criteria)[number]) =>
     Number(c.budget_max) > 0 ? (searchContribution(buyer, c) / Number(c.budget_max)) * 100 : 0;
@@ -258,11 +270,22 @@ function BuyerScoreCard({ buyer, onEdit }: { buyer: BuyerProfile; onEdit?: () =>
 
       {criteria.length > 0 && (
         <div className="mt-4 space-y-2">
-          {criteria.map((c, i) => (
-            <div key={i} className="grid grid-cols-2 gap-3 rounded-lg bg-slate-900 p-3 text-center text-xs sm:grid-cols-4">
+          {indexed.map(({ c, index }, i) => (
+            <div key={index} className="grid grid-cols-2 gap-3 rounded-lg bg-slate-900 p-3 text-center text-xs sm:grid-cols-4">
               <div>
                 <p className="text-slate-400">{c.label ? c.label : `Recherche ${i + 1}`}</p>
                 <p className="font-semibold text-cyan-400">{c.desired_zone}</p>
+                {onPurchased && (
+                  <label className="mt-1.5 inline-flex cursor-pointer items-center gap-1.5 text-slate-400 hover:text-emerald-400">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => onPurchased(index)}
+                      className="h-3.5 w-3.5 rounded border-slate-500 bg-slate-800 text-emerald-500"
+                    />
+                    Acheté
+                  </label>
+                )}
               </div>
               <div>
                 <p className="text-slate-400">Budget max</p>
@@ -570,13 +593,50 @@ function BuyerView() {
     );
   }
 
+  /** Professionnels : coche « Acheté » (ou annulation depuis l'historique) */
+  async function setPurchased(index: number, purchased: boolean) {
+    if (!supabase || !user || !profile) return;
+    setError(null);
+    const next = (profile.search_criteria ?? []).map((c, i) =>
+      i === index ? { ...c, purchased_at: purchased ? new Date().toISOString() : null } : c,
+    );
+    const updated = { ...profile, search_criteria: next } as BuyerProfile;
+    const { error: err } = await supabase
+      .from('buyer_profiles')
+      .update({ search_criteria: next, score: calculateBuyerScore(updated) })
+      .eq('user_id', user.id);
+    if (err) setError(`La mise à jour n'a pas pu être enregistrée : ${err.message}`);
+    await load();
+  }
+  const purchasedList = (profile.search_criteria ?? [])
+    .map((c, index) => ({ c, index }))
+    .filter(({ c }) => c.purchased_at)
+    .sort((a, b) => String(b.c.purchased_at).localeCompare(String(a.c.purchased_at)));
+
   const shown = sellerFilter === 'all' ? matches : matches.filter((m) => m.seller_type === sellerFilter);
   const exactCount = matches.filter((m) => m.details.zone).length;
 
   return (
     <>
       {error && <ErrorBox message={error} />}
-      <BuyerScoreCard buyer={profile} onEdit={() => navigate('/buyer/new')} />
+      <BuyerScoreCard
+        buyer={profile}
+        onEdit={() => navigate('/buyer/new')}
+        onPurchased={user?.is_professional ? (i) => setPurchased(i, true) : undefined}
+      />
+      {purchasedList.length > 0 && (
+        <HistorySection
+          title="Historique des achats"
+          rows={purchasedList.map(({ c, index }) => ({
+            key: String(index),
+            date: c.purchased_at as string,
+            title: `${PROPERTY_TYPE_LABELS[c.desired_property_type]} · ${c.desired_zone}`,
+            detail: `Budget ${chf(c.budget_max)}`,
+            reference: c.label,
+            onUndo: () => setPurchased(index, false),
+          }))}
+        />
+      )}
 
       <section>
         <h2 className="text-lg font-semibold text-slate-100">Vos matchs</h2>
@@ -814,6 +874,20 @@ function SellerView() {
     } catch {
       window.prompt('Copiez ce lien :', link);
     }
+  }
+
+  /** Professionnels : coche « Vendu » (le bien quitte le réseau) ou annulation depuis l'historique */
+  async function setSold(propertyId: string, sold: boolean) {
+    if (!supabase) return;
+    setBusyId(propertyId);
+    setError(null);
+    const { error: err } = await supabase
+      .from('properties')
+      .update({ sold_at: sold ? new Date().toISOString() : null, is_active: !sold })
+      .eq('id', propertyId);
+    if (err) setError(`La mise à jour n'a pas pu être enregistrée : ${err.message}`);
+    setBusyId(null);
+    await load();
   }
 
   const load = useCallback(async () => {
@@ -1130,14 +1204,14 @@ function SellerView() {
           </div>
         </div>
 
-        {properties.length === 0 ? (
+        {properties.filter((x) => !x.property.sold_at).length === 0 ? (
           <EmptyBox icon={<Home className="h-10 w-10" />}>
             Vous n'avez pas encore ajouté de bien. Ajoutez-en un pour voir combien d'acheteurs qualifiés
             correspondent.
           </EmptyBox>
         ) : (
           <ul className="space-y-3">
-            {properties.map(({ property: p, matching_buyers, pending_requests, seller_score }) => (
+            {properties.filter((x) => !x.property.sold_at).map(({ property: p, matching_buyers, pending_requests, seller_score }) => (
               <li
                 key={p.id}
                 className={`flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-slate-800 p-4 ${
@@ -1151,6 +1225,7 @@ function SellerView() {
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
                     Score vendeur {seller_score}/100 · {p.is_active ? 'Actif' : 'Retiré du réseau'}
+                    {p.client_ref && <> · Réf. {p.client_ref}</>}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -1182,13 +1257,81 @@ function SellerView() {
                   >
                     {p.is_active ? <><EyeOff className="h-4 w-4" /> Retirer</> : <><Eye className="h-4 w-4" /> Réactiver</>}
                   </button>
+                  {isPro && (
+                    <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-emerald-500 hover:text-emerald-400">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        disabled={busyId === p.id}
+                        onChange={() => setSold(p.id, true)}
+                        className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-emerald-500"
+                      />
+                      Vendu
+                    </label>
+                  )}
                 </div>
               </li>
             ))}
           </ul>
         )}
+
+        {properties.some((x) => x.property.sold_at) && (
+          <div className="mt-6">
+            <HistorySection
+              title="Historique des ventes"
+              rows={properties
+                .filter((x) => x.property.sold_at)
+                .sort((a, b) => String(b.property.sold_at).localeCompare(String(a.property.sold_at)))
+                .map(({ property: p }) => ({
+                  key: p.id,
+                  date: p.sold_at as string,
+                  title: p.title,
+                  detail: `${p.zone} · ${PROPERTY_TYPE_LABELS[p.property_type]} · ${chf(p.price)}`,
+                  reference: p.client_ref,
+                  onUndo: () => setSold(p.id, false),
+                }))}
+            />
+          </div>
+        )}
       </section>
     </>
+  );
+}
+
+// ============================================================
+// Historique (ventes, achats) : une ligne par opération, annulable
+// ============================================================
+function HistorySection({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: { key: string; date: string; title: string; detail: string; reference?: string | null; onUndo: () => void }[];
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-700 bg-slate-800/60 p-5">
+      <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-400">
+        <History className="h-4 w-4" /> {title}
+        <span className="rounded-full bg-slate-900 px-2 py-0.5 text-xs text-slate-300">{rows.length}</span>
+      </h3>
+      <ul className="mt-3 divide-y divide-slate-700/70">
+        {rows.map((r) => (
+          <li key={r.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 text-sm">
+            <span className="w-24 shrink-0 tabular-nums text-slate-500">
+              {new Date(r.date).toLocaleDateString('fr-CH')}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="font-medium text-slate-100">{r.title}</span>
+              <span className="text-slate-400"> · {r.detail}</span>
+              {r.reference && <span className="text-cyan-400"> · Réf. {r.reference}</span>}
+            </span>
+            <button onClick={r.onUndo} className="text-xs text-slate-500 hover:text-cyan-400 hover:underline">
+              Annuler
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
