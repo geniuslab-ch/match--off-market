@@ -28,12 +28,13 @@ import { useAuth } from '../lib/AuthContext';
 import { calculateBuyerScore, criterionBuyerScore, searchContribution } from '../utils/matching';
 import { PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType, BuyerProfile, SearchCriteria, CommercialType } from '../types';
-import { COMMERCIAL_TYPES, fieldRules } from '../utils/propertyFields';
+import { commercialTypes, fieldRules } from '../utils/propertyFields';
 import CommuneSelect from './CommuneSelect';
 import MoneyInput from './MoneyInput';
 import Brand from './Brand';
 import DocumentUpload from './DocumentUpload';
 
+import { loc, t, LanguageSwitcher } from '../i18n';
 interface CriteriaForm {
   desired_zone: string;
   desired_property_type: PropertyType;
@@ -105,7 +106,7 @@ function toSaved(c: CriteriaForm): SearchCriteria {
 
 // Nombres de pièces proposés (usage suisse : demi-pièces)
 const ROOM_OPTIONS = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8];
-const roomText = (n: number) => n.toLocaleString('fr-CH');
+const roomText = (n: number) => n.toLocaleString(loc());
 
 function newCriteria(): CriteriaForm {
   return {
@@ -247,22 +248,22 @@ export default function BuyerForm() {
   /** Message d'erreur pour une recherche, ou null si elle est complète */
   function criteriaError(i: number): string | null {
     const c = criteriaList[i];
-    if (!c.budget_max || Number(c.budget_max) <= 0) return `Recherche ${i + 1} : le budget max est requis.`;
+    if (!c.budget_max || Number(c.budget_max) <= 0) return t("Recherche {0} : le budget max est requis.", i + 1);
     const minS = Number(c.desired_surface_min_m2);
     const maxS = Number(c.desired_surface_max_m2);
-    if (minS && maxS && minS > maxS) return `Recherche ${i + 1} : la surface min ne peut pas dépasser la surface max.`;
+    if (minS && maxS && minS > maxS) return t("Recherche {0} : la surface min ne peut pas dépasser la surface max.", i + 1);
     const minR = Number(c.desired_rooms_min);
     const maxR = Number(c.desired_rooms_max);
-    if (minR && maxR && minR > maxR) return `Recherche ${i + 1} : le nombre de pièces min ne peut pas dépasser le max.`;
+    if (minR && maxR && minR > maxR) return t("Recherche {0} : le nombre de pièces min ne peut pas dépasser le max.", i + 1);
     const minU = Number(c.desired_units_min);
     const maxU = Number(c.desired_units_max);
-    if (minU && maxU && minU > maxU) return `Recherche ${i + 1} : le nombre d'appartements min ne peut pas dépasser le max.`;
+    if (minU && maxU && minU > maxU) return t("Recherche {0} : le nombre d'appartements min ne peut pas dépasser le max.", i + 1);
     // Doublon : même zone, type, budget et référence qu'une recherche précédente
     const key = (x: CriteriaForm) => [x.desired_zone, x.desired_property_type, Number(x.budget_max) || 0, x.label.trim().toLowerCase()].join('|');
     const twin = criteriaList.findIndex((x, j) => j < i && key(x) === key(c));
-    if (twin >= 0) return `Recherche ${i + 1} : identique à la recherche ${twin + 1}. Modifiez-la ou ajoutez une référence.`;
+    if (twin >= 0) return t("Recherche {0} : identique à la recherche {1}. Modifiez-la ou ajoutez une référence.", i + 1, twin + 1);
     const y = Number(c.min_gross_yield);
-    if (c.min_gross_yield && (Number.isNaN(y) || y < 0 || y > 30)) return `Recherche ${i + 1} : rendement brut entre 0 et 30 %.`;
+    if (c.min_gross_yield && (Number.isNaN(y) || y < 0 || y > 30)) return t("Recherche {0} : rendement brut entre 0 et 30 %.", i + 1);
     return null;
   }
 
@@ -274,11 +275,11 @@ export default function BuyerForm() {
     setError(null);
     setSuccess(false);
     if (!supabase) {
-      setError("Supabase non configuré. Veuillez configurer les variables d'environnement.");
+      setError(t("Supabase non configuré. Veuillez configurer les variables d'environnement."));
       return false;
     }
     if (!user) {
-      setError('Vous devez être connecté pour enregistrer votre profil. Veuillez vous reconnecter.');
+      setError(t("Vous devez être connecté pour enregistrer votre profil. Veuillez vous reconnecter."));
       return false;
     }
     const ready = criteriaList.filter((_, i) => criteriaError(i) === null);
@@ -309,7 +310,7 @@ export default function BuyerForm() {
     setLoading(false);
 
     if (err) {
-      setError(`Erreur lors de l'enregistrement : ${err.message}`);
+      setError(t("Erreur lors de l'enregistrement : {0}", err.message));
       return false;
     }
     setHasSaved(true);
@@ -328,7 +329,7 @@ export default function BuyerForm() {
       return;
     }
     if (!(await saveProfile(false))) return;
-    setSavedNote(`Recherche ${step + 1} enregistrée.`);
+    setSavedNote(t("Recherche {0} enregistrée.", step + 1));
     setTimeout(() => setSavedNote(null), 3000);
     if (next === 'add') addCriteria();
     else goTo(next);
@@ -365,29 +366,32 @@ export default function BuyerForm() {
             onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400"
           >
-            <ArrowLeft className="h-4 w-4" /> Retour
+            <ArrowLeft className="h-4 w-4" />{' '}{t("Retour")}
           </button>
-          <Brand size="sm" />
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Brand size="sm" />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-8">
         {loadingProfile ? (
-          <p className="py-20 text-center text-slate-500">Chargement de votre profil...</p>
+          <p className="py-20 text-center text-slate-500">{t("Chargement de votre profil...")}</p>
         ) : (
         <>
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-100">
-            Profil Acheteur Solvable
+            {t("Profil Acheteur Solvable")}
           </h1>
           <p className="mt-1 text-slate-400">
-            Complétez vos critères pour accéder aux biens off-market
+            {t("Complétez vos critères pour accéder aux biens off-market")}
           </p>
           <a
             href="/buyer/import"
             className="mt-2 inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-cyan-400 hover:underline"
           >
-            <FileSpreadsheet className="h-4 w-4" /> Plusieurs recherches à saisir ? Importez-les depuis Excel
+            <FileSpreadsheet className="h-4 w-4" />{' '}{t("Plusieurs recherches à saisir ? Importez-les depuis Excel")}
           </a>
         </div>
 
@@ -404,16 +408,16 @@ export default function BuyerForm() {
           </div>
           <div>
             <p className="text-sm font-medium text-slate-100">
-              Score acheteur : {liveScore}/100
+              {t("Score acheteur :")}{' '}{liveScore}/100
             </p>
             <p className="text-xs text-slate-400">
               {liveScore >= 80
-                ? 'Qualifié pour le matching'
-                : 'Seuil requis : 80/100'}
+                ? t("Qualifié pour le matching")
+                : t("Seuil requis : 80/100")}
             </p>
             {criteriaList.length > 1 && (
               <p className="mt-1 text-xs text-slate-500">
-                Chaque recherche est évaluée avec son propre budget :{' '}
+                {t("Chaque recherche est évaluée avec son propre budget :")}{' '}
                 {criteriaList
                   .map(
                     (c, i) =>
@@ -442,12 +446,12 @@ export default function BuyerForm() {
         {success && (
           <div className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-950 px-4 py-3 text-sm text-emerald-400">
             <CheckCircle2 className="h-4 w-4 shrink-0" />
-            Profil enregistré avec succès ! Redirection...
+            {t("Profil enregistré avec succès ! Redirection...")}
           </div>
         )}
 
         {/* Étapes : une par recherche, puis le financement */}
-        <nav aria-label="Étapes" className="mb-6 flex flex-wrap items-center gap-2">
+        <nav aria-label={t("Étapes")} className="mb-6 flex flex-wrap items-center gap-2">
           {criteriaList.map((c, i) => {
             const done = criteriaError(i) === null;
             return (
@@ -468,7 +472,7 @@ export default function BuyerForm() {
                 >
                   {done ? <Check className="h-3 w-3" /> : i + 1}
                 </span>
-                Recherche {i + 1}
+                {t("Recherche {0}", i + 1)}
                 {done && <span className="hidden text-slate-500 sm:inline">· {c.label.trim() || c.desired_zone}</span>}
               </button>
             );
@@ -478,7 +482,7 @@ export default function BuyerForm() {
             onClick={addCriteria}
             className="flex items-center gap-1 rounded-full border border-dashed border-slate-600 px-3 py-1.5 text-xs text-slate-400 hover:border-cyan-500 hover:text-cyan-400"
           >
-            <Plus className="h-3.5 w-3.5" /> Recherche
+            <Plus className="h-3.5 w-3.5" />{' '}{t("Recherche")}
           </button>
           <ChevronRight className="h-4 w-4 text-slate-600" />
           <button
@@ -490,7 +494,7 @@ export default function BuyerForm() {
                 : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500'
             }`}
           >
-            <Landmark className="h-3.5 w-3.5" /> Financement
+            <Landmark className="h-3.5 w-3.5" />{' '}{t("Financement")}
           </button>
         </nav>
 
@@ -506,25 +510,25 @@ export default function BuyerForm() {
             <section className="space-y-4 rounded-2xl border border-slate-700 bg-slate-800 p-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
-                  Étape {index + 1} · Recherche {index + 1}
+                  {t("Étape {0} · Recherche {0}", index + 1)}
                 </h2>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => copyCriteria(index)}
-                    title="Dupliquer cette recherche"
+                    title={t("Dupliquer cette recherche")}
                     className="flex items-center gap-1 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-slate-600 hover:text-cyan-400"
                   >
-                    <Copy className="h-3.5 w-3.5" /> Dupliquer
+                    <Copy className="h-3.5 w-3.5" />{' '}{t("Dupliquer")}
                   </button>
                   {criteriaList.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeCriteria(index)}
-                      title="Supprimer cette recherche"
+                      title={t("Supprimer cette recherche")}
                       className="flex items-center gap-1 rounded-lg bg-slate-700 px-2.5 py-1.5 text-xs text-red-400 hover:bg-red-950"
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Supprimer
+                      <Trash2 className="h-3.5 w-3.5" />{' '}{t("Supprimer")}
                     </button>
                   )}
                 </div>
@@ -533,14 +537,14 @@ export default function BuyerForm() {
               {/* Référence privée */}
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Tag className="h-3.5 w-3.5" /> Référence
-                  <span className="text-xs text-slate-500">(facultatif, visible de vous seul)</span>
+                  <Tag className="h-3.5 w-3.5" />{' '}{t("Référence")}
+                  <span className="text-xs text-slate-500">{t("(facultatif, visible de vous seul)")}</span>
                 </label>
                 <input
                   type="text"
                   value={criteria.label}
                   onChange={(e) => updateCriteria(index, 'label', e.target.value)}
-                  placeholder="Ex. nom du client, ou « résidence principale »"
+                  placeholder={t("Ex. nom du client, ou « résidence principale »")}
                   maxLength={60}
                   className={inputCls}
                 />
@@ -550,7 +554,7 @@ export default function BuyerForm() {
                 {/* Zone souhaitée - recherche */}
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <MapPin className="h-3.5 w-3.5" /> Zone souhaitée
+                    <MapPin className="h-3.5 w-3.5" />{' '}{t("Zone souhaitée")}
                   </label>
                   <CommuneSelect
                     allowCantons
@@ -562,7 +566,7 @@ export default function BuyerForm() {
                 {/* Type de bien */}
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Home className="h-3.5 w-3.5" /> Type de bien
+                    <Home className="h-3.5 w-3.5" />{' '}{t("Type de bien")}
                   </label>
                   <select
                     value={criteria.desired_property_type}
@@ -588,7 +592,7 @@ export default function BuyerForm() {
                 {/* Budget max */}
                 <div className="col-span-2 sm:col-span-1">
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <BadgeSwissFranc className="h-3.5 w-3.5" /> Budget max (CHF)
+                    <BadgeSwissFranc className="h-3.5 w-3.5" />{' '}{t("Budget max (CHF)")}
                   </label>
                   <MoneyInput
                     value={criteria.budget_max}
@@ -602,16 +606,16 @@ export default function BuyerForm() {
                 {/* Apport propre à cette recherche (facultatif) */}
                 <div className="col-span-2 sm:col-span-1">
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Landmark className="h-3.5 w-3.5" /> Apport pour cette recherche
-                    <span className="text-xs text-slate-500">(facultatif)</span>
+                    <Landmark className="h-3.5 w-3.5" />{' '}{t("Apport pour cette recherche")}
+                    <span className="text-xs text-slate-500">{t("(facultatif)")}</span>
                   </label>
                   <MoneyInput
                     value={criteria.personal_contribution}
                     onChange={(v) => updateCriteria(index, 'personal_contribution', v)}
                     placeholder={
                       Number(financials.personal_contribution) > 0
-                        ? `Apport général : ${Number(financials.personal_contribution).toLocaleString('fr-CH')}`
-                        : 'Apport général'
+                        ? t("Apport général : {0}", Number(financials.personal_contribution).toLocaleString(loc()))
+                        : t("Apport général")
                     }
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
@@ -628,9 +632,11 @@ export default function BuyerForm() {
                 return (
                   <p className={`text-xs ${ok ? 'text-emerald-400' : 'text-amber-300'}`}>
                     {apport > 0
-                      ? `Apport ${own > 0 ? 'de cette recherche' : 'général'} : ${apport.toLocaleString('fr-CH')} CHF, soit ${pct.toFixed(1).replace('.', ',')} % du budget`
-                      : 'Aucun apport renseigné'}
-                    {ok ? ' (+20 pts)' : ' (20 % minimum pour les 20 points)'}
+                      ? own > 0
+                        ? t("Apport de cette recherche : {0} CHF, soit {1} % du budget", apport.toLocaleString(loc()), pct.toLocaleString(loc(), { maximumFractionDigits: 1, minimumFractionDigits: 1 }))
+                        : t("Apport général : {0} CHF, soit {1} % du budget", apport.toLocaleString(loc()), pct.toLocaleString(loc(), { maximumFractionDigits: 1, minimumFractionDigits: 1 }))
+                      : t("Aucun apport renseigné")}
+                    {ok ? t(" (+20 pts)") : t(" (20 % minimum pour les 20 points)")}
                   </p>
                 );
               })()}
@@ -643,12 +649,12 @@ export default function BuyerForm() {
                   fields: [keyof CriteriaForm, keyof CriteriaForm],
                   options: number[] | null,
                   unit: [string, string],
-                  placeholders: [string, string] = ['Min.', 'Max.'],
+                  placeholders: [string, string] = [t("Min."), t("Max.")],
                 ) => (
                   <div>
                     <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                       {icon} {label}
-                      <span className="text-xs text-slate-500">(facultatif)</span>
+                      <span className="text-xs text-slate-500">{t("(facultatif)")}</span>
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {fields.map((field, k) => (
@@ -659,7 +665,7 @@ export default function BuyerForm() {
                               onChange={(e) => updateCriteria(index, field, e.target.value)}
                               className={inputCls}
                             >
-                              <option value="">Indifférent</option>
+                              <option value="">{t("Indifférent")}</option>
                               {options.map((n) => (
                                 <option key={n} value={String(n)}>
                                   {roomText(n)} {n >= 2 ? unit[1] : unit[0]}
@@ -676,7 +682,7 @@ export default function BuyerForm() {
                               className={inputCls}
                             />
                           )}
-                          <p className="mt-0.5 text-xs text-slate-500">{k === 0 ? 'Minimum' : 'Maximum'}</p>
+                          <p className="mt-0.5 text-xs text-slate-500">{k === 0 ? t("Minimum") : t("Maximum")}</p>
                         </div>
                       ))}
                     </div>
@@ -685,22 +691,22 @@ export default function BuyerForm() {
                 return (
                   <>
                     {rules.units &&
-                      range(<Building2 className="h-3.5 w-3.5" />, "Nombre d'appartements", ['desired_units_min', 'desired_units_max'], null, ['appartement', 'appartements'], ['Min. ex: 3', 'Max. ex: 10'])}
+                      range(<Building2 className="h-3.5 w-3.5" />, t("Nombre d'appartements"), ['desired_units_min', 'desired_units_max'], null, ['appartement', 'appartements'], [t("Min. ex: 3"), t("Max. ex: 10")])}
 
                     {rules.commercialType && (
                       <div>
                         <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
                           <Store className="h-3.5 w-3.5" />
-                          {rules.units ? 'Type de commerce au rez' : 'Type de local'}
-                          <span className="text-xs text-slate-500">(facultatif)</span>
+                          {rules.units ? t("Type de commerce au rez") : t("Type de local")}
+                          <span className="text-xs text-slate-500">{t("(facultatif)")}</span>
                         </label>
                         <select
                           value={criteria.desired_commercial_type}
                           onChange={(e) => updateCriteria(index, 'desired_commercial_type', e.target.value)}
                           className={inputCls}
                         >
-                          <option value="">Indifférent</option>
-                          {COMMERCIAL_TYPES.map(([val, label]) => (
+                          <option value="">{t("Indifférent")}</option>
+                          {commercialTypes().map(([val, label]) => (
                             <option key={val} value={val}>
                               {label}
                             </option>
@@ -712,21 +718,21 @@ export default function BuyerForm() {
                     {rules.yield && (
                       <div>
                         <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                          <TrendingUp className="h-3.5 w-3.5" /> Rendement brut minimum (%)
-                          <span className="text-xs text-slate-500">(facultatif)</span>
+                          <TrendingUp className="h-3.5 w-3.5" />{' '}{t("Rendement brut minimum (%)")}
+                          <span className="text-xs text-slate-500">{t("(facultatif)")}</span>
                         </label>
                         <input
                           type="number"
                           value={criteria.min_gross_yield}
                           onChange={(e) => updateCriteria(index, 'min_gross_yield', e.target.value)}
-                          placeholder="Ex. 4,5"
+                          placeholder={t("Ex. 4,5")}
                           min={0}
                           max={30}
                           step={0.1}
                           className={inputCls}
                         />
                         <p className="mt-0.5 text-xs text-slate-500">
-                          Loyers annuels hors charges divisés par le prix. Un bien sans état locatif n'est pas écarté.
+                          {t("Loyers annuels hors charges divisés par le prix. Un bien sans état locatif n'est pas écarté.")}
                         </p>
                       </div>
                     )}
@@ -737,11 +743,11 @@ export default function BuyerForm() {
                       ['desired_surface_min_m2', 'desired_surface_max_m2'],
                       null,
                       ['m²', 'm²'],
-                      ['Min. ex: 60', 'Max. ex: 120'],
+                      [t("Min. ex: 60"), t("Max. ex: 120")],
                     )}
 
                     {rules.rooms &&
-                      range(<DoorOpen className="h-3.5 w-3.5" />, 'Nombre de pièces', ['desired_rooms_min', 'desired_rooms_max'], ROOM_OPTIONS, ['pièce', 'pièces'])}
+                      range(<DoorOpen className="h-3.5 w-3.5" />, t("Nombre de pièces"), ['desired_rooms_min', 'desired_rooms_max'], ROOM_OPTIONS, [t("pièce"), t("pièces")])}
                   </>
                 );
               })()}
@@ -756,7 +762,7 @@ export default function BuyerForm() {
                 onClick={() => saveStep('add')}
                 className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-600 py-3 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400 disabled:opacity-50"
               >
-                <Plus className="h-4 w-4" /> Enregistrer et ajouter une recherche
+                <Plus className="h-4 w-4" />{' '}{t("Enregistrer et ajouter une recherche")}
               </button>
               <button
                 type="submit"
@@ -767,7 +773,7 @@ export default function BuyerForm() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    {step + 1 < financeStep ? `Enregistrer et passer à la recherche ${step + 2}` : 'Enregistrer et passer au financement'}
+                    {step + 1 < financeStep ? t("Enregistrer et passer à la recherche {0}", step + 2) : t("Enregistrer et passer au financement")}
                     <ChevronRight className="h-4 w-4" />
                   </>
                 )}
@@ -780,13 +786,13 @@ export default function BuyerForm() {
           {/* Critères financiers (scoring) */}
             <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
-                Critères financiers
+                {t("Critères financiers")}
               </h2>
   
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Landmark className="h-3.5 w-3.5" /> Apport général (CHF)
+                    <Landmark className="h-3.5 w-3.5" />{' '}{t("Apport général (CHF)")}
                   </label>
                   <MoneyInput
                     value={financials.personal_contribution}
@@ -795,14 +801,13 @@ export default function BuyerForm() {
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                   />
                   <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                    S'applique aux recherches sans apport propre. Exemple : votre 2e pilier peut servir pour une
-                    résidence principale, mais pas pour un immeuble de rendement.
+                    {t("S'applique aux recherches sans apport propre. Exemple : votre 2e pilier peut servir pour une résidence principale, mais pas pour un immeuble de rendement.")}
                   </p>
                 </div>
   
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Percent className="h-3.5 w-3.5" /> Taux d'endettement (%)
+                    <Percent className="h-3.5 w-3.5" />{' '}{t("Taux d'endettement (%)")}
                   </label>
                   <input
                     type="number"
@@ -819,8 +824,8 @@ export default function BuyerForm() {
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     {financials.debt_ratio !== '' && Number(financials.debt_ratio) <= 33
-                      ? '+10 pts'
-                      : 'Doit être ≤ 33%'}
+                      ? t("+10 pts")
+                      : t("Doit être ≤ 33%")}
                   </p>
                 </div>
               </div>
@@ -845,12 +850,12 @@ export default function BuyerForm() {
                   <p
                     className={`text-sm font-medium ${financials.has_pre_approval ? 'text-cyan-400' : 'text-slate-300'}`}
                   >
-                    Pré-approbation bancaire
+                    {t("Pré-approbation bancaire")}
                   </p>
                   <p className="text-xs text-slate-500">
                     {financials.has_pre_approval
-                      ? '+30 pts'
-                      : 'Ajoute 30 points à votre score'}
+                      ? t("+30 pts")
+                      : t("Ajoute 30 points à votre score")}
                   </p>
                 </div>
               </label>
@@ -859,10 +864,9 @@ export default function BuyerForm() {
               {financials.has_pre_approval && (
                 <div>
                 <p className="mb-2 text-xs leading-relaxed text-slate-400">
-                  Facultatif. Le document n'est jamais montré aux vendeurs : seuls vous et l'administration d'Offly
-                  pouvez l'ouvrir. Si vous déposez le document d'un client, obtenez d'abord son accord.{' '}
+                  {t("Facultatif. Le document n'est jamais montré aux vendeurs : seuls vous et l'administration d'Offly pouvez l'ouvrir. Si vous déposez le document d'un client, obtenez d'abord son accord.")}{' '}
                   <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
-                    En savoir plus
+                    {t("En savoir plus")}
                   </a>
                 </p>
                 <DocumentUpload
@@ -883,12 +887,10 @@ export default function BuyerForm() {
               />
               <span>
                 <span className="block text-sm font-medium text-slate-200">
-                  Montrer ma recherche aux vendeurs et aux régies
+                  {t("Montrer ma recherche aux vendeurs et aux régies")}
                 </span>
                 <span className="mt-1 block text-xs leading-relaxed text-slate-400">
-                  Ils voient uniquement la zone, le type de bien, la surface, le nombre de pièces et un budget arrondi. Jamais votre nom,
-                  votre pseudo ni votre apport. Ils peuvent ainsi vous proposer un bien qui n'est pas encore dans le
-                  réseau.
+                  {t("Ils voient uniquement la zone, le type de bien, la surface, le nombre de pièces et un budget arrondi. Jamais votre nom, votre pseudo ni votre apport. Ils peuvent ainsi vous proposer un bien qui n'est pas encore dans le réseau.")}
                 </span>
               </span>
             </label>
@@ -899,7 +901,7 @@ export default function BuyerForm() {
                   onClick={() => goTo(financeStep - 1)}
                   className="flex items-center justify-center gap-2 rounded-xl border border-slate-600 px-5 py-3 text-sm text-slate-300 hover:border-cyan-500 hover:text-cyan-400"
                 >
-                  <ArrowLeft className="h-4 w-4" /> Recherches
+                  <ArrowLeft className="h-4 w-4" />{' '}{t("Recherches")}
                 </button>
                 <button
                   type="submit"
@@ -908,10 +910,12 @@ export default function BuyerForm() {
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Enregistrement...
+                      <Loader2 className="h-4 w-4 animate-spin" />{' '}{t("Enregistrement...")}
                     </span>
                   ) : (
-                    `Enregistrer mon profil acheteur (${criteriaList.length} recherche${criteriaList.length > 1 ? 's' : ''})`
+                    criteriaList.length > 1
+                      ? t("Enregistrer mon profil acheteur ({0} recherches)", criteriaList.length)
+                      : t("Enregistrer mon profil acheteur ({0} recherche)", criteriaList.length)
                   )}
                 </button>
               </div>

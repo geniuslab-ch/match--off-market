@@ -3,12 +3,13 @@
 // ============================================================
 // La bibliothèque Excel (exceljs) n'est chargée qu'au moment de l'utiliser.
 
-import { PROPERTY_TYPE_LABELS } from '../types';
+import { COMMERCIAL_TYPE_LABELS, frLabels, PROPERTY_TYPE_LABELS } from '../types';
 import type { PropertyType } from '../types';
 import { CANTONS, ROMANDIE_COMMUNES } from '../data/romandieCommunes';
-import { COMMERCIAL_TYPES } from './propertyFields';
+import { commercialTypes } from './propertyFields';
 import type { CommercialType } from '../types';
 
+import { allTranslations, t } from '../i18n';
 export interface ImportColumn {
   key: string;
   header: string;
@@ -77,39 +78,40 @@ export function markDuplicates(
     const k = keyOf(r.payload);
     const already = existing.get(k);
     if (already !== undefined) {
-      return { ...r, payload: null, errors: [`doublon : déjà enregistré${already ? ` (« ${already} »)` : ''}`] };
+      return { ...r, payload: null, errors: [t("doublon : déjà enregistré{0}", already ? ` (« ${already} »)` : '')] };
     }
     const first = seen.get(k);
-    if (first !== undefined) return { ...r, payload: null, errors: [`doublon de la ligne ${first}`] };
+    if (first !== undefined) return { ...r, payload: null, errors: [t("doublon de la ligne {0}", first)] };
     seen.set(k, r.line);
     return r;
   });
 }
 
-export const TYPE_ENTRIES = Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][];
-const TYPE_BY_NORM = new Map<string, PropertyType>(
-  TYPE_ENTRIES.flatMap(([key, label]) => [
-    [norm(label), key],
-    [norm(key), key],
-  ]),
-);
+/** Types de bien [clé, libellé dans la langue choisie] */
+export const typeEntries = () => Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][];
+
+// Reconnaît une valeur saisie dans n'importe laquelle des quatre langues, ou la clé technique
+function multilingual<K extends string>(map: Record<K, string>): Map<string, K> {
+  const fr = frLabels(map);
+  return new Map<string, K>(
+    (Object.keys(fr) as K[]).flatMap((key) => [
+      [norm(key), key] as [string, K],
+      ...allTranslations(fr[key]).map((label) => [norm(label), key] as [string, K]),
+    ]),
+  );
+}
+const TYPE_BY_NORM = multilingual(PROPERTY_TYPE_LABELS);
+const COMMERCE_BY_NORM = multilingual(COMMERCIAL_TYPE_LABELS);
 const COMMUNE_BY_NORM = new Map(ROMANDIE_COMMUNES.map((c) => [norm(c), c]));
-// « Canton de Vaud », mais aussi « Vaud » ou « VD »
+// « Canton de Vaud », « Kanton Waadt », « Vaud » ou « VD » : toujours le nom français enregistré
 const CANTON_BY_NORM = new Map<string, string>(
   CANTONS.flatMap((c) => [
-    [norm(c.label), c.label],
-    [norm(c.code), c.label],
-    [norm(c.label.replace(/^Canton (de |du )/, '')), c.label],
+    [norm(c.code), c.label] as [string, string],
+    [norm(c.label.replace(/^Canton (de |du )/, '')), c.label] as [string, string],
+    ...allTranslations(c.label).map((l) => [norm(l), c.label] as [string, string]),
   ]),
 );
-
 export const findType = (raw: string): PropertyType | null => TYPE_BY_NORM.get(norm(raw)) ?? null;
-const COMMERCE_BY_NORM = new Map<string, CommercialType>(
-  COMMERCIAL_TYPES.flatMap(([key, label]) => [
-    [norm(label), key],
-    [norm(key), key],
-  ]),
-);
 export const findCommerce = (raw: string): CommercialType | null => COMMERCE_BY_NORM.get(norm(raw)) ?? null;
 export const findCommune = (raw: string): string | null => COMMUNE_BY_NORM.get(norm(raw)) ?? null;
 /** Commune, ou canton entier si autorisé ; le nom exact utilisé par le matching */
@@ -127,8 +129,8 @@ export function parseNumber(raw: string | undefined): number | null {
 export function parseYesNo(raw: string | undefined): boolean | null {
   const v = norm(raw);
   if (v === '') return null;
-  if (['oui', 'o', 'yes', 'y', 'x', '1', 'vrai', 'true'].includes(v)) return true;
-  if (['non', 'n', 'no', '0', 'faux', 'false'].includes(v)) return false;
+  if (['oui', 'o', 'yes', 'y', 'x', '1', 'vrai', 'true', 'ja', 'j', 'si', 'sì', 'wahr'].includes(v)) return true;
+  if (['non', 'n', 'no', '0', 'faux', 'false', 'nein', 'falsch'].includes(v)) return false;
   return null;
 }
 
@@ -149,7 +151,7 @@ function downloadBlob(data: ArrayBuffer, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const headerText = (c: ImportColumn) => (c.required ? `${c.header} *` : c.header);
+const headerText = (c: ImportColumn) => (c.required ? `${t(c.header)} *` : t(c.header));
 
 /** Crée et télécharge un modèle : feuille à remplir, exemple, mode d'emploi, listes */
 export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
@@ -171,23 +173,25 @@ export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
     ws.views = [{ state: 'frozen', ySplit: 1 }];
   };
 
-  const ws = wb.addWorksheet(spec.sheet);
+  const typeEntries_ = typeEntries();
+  const commerces = commercialTypes();
+  const ws = wb.addWorksheet(t(spec.sheet));
   ws.addRow(columns.map(headerText));
   styleHeader(ws);
 
-  const ex = wb.addWorksheet('Exemple');
+  const ex = wb.addWorksheet(t('Exemple'));
   ex.addRow(columns.map(headerText));
   spec.examples.forEach((r) => ex.addRow(r));
   styleHeader(ex);
 
-  const help = wb.addWorksheet("Mode d'emploi");
+  const help = wb.addWorksheet(t("Mode d'emploi"));
   help.columns = [{ width: 32 }, { width: 12 }, { width: 76 }];
-  help.addRow(['Colonne', 'Obligatoire', 'Comment la remplir']).font = { bold: true };
-  columns.forEach((c) => help.addRow([c.header, c.required ? 'oui' : 'non', c.help]));
+  help.addRow([t("Colonne"), t("Obligatoire"), t("Comment la remplir")]).font = { bold: true };
+  columns.forEach((c) => help.addRow([t(c.header), c.required ? t('oui') : t('non'), t(c.help)]));
   help.addRow([]);
-  help.addRow([`Remplissez la feuille « ${spec.sheet} » sans modifier la ligne de titres. La feuille « Exemple » n'est pas importée.`]);
-  help.addRow([`${spec.maxRows} lignes au maximum par fichier.`]);
-  spec.notes.forEach((n) => help.addRow([n]));
+  help.addRow([t("Remplissez la feuille « {0} » sans modifier la ligne de titres. La feuille « Exemple » n'est pas importée.", t(spec.sheet))]);
+  help.addRow([t("{0} lignes au maximum par fichier.", spec.maxRows)]);
+  spec.notes.forEach((n) => help.addRow([t(n)]));
 
   // Listes des menus déroulants
   const zones = [
@@ -196,12 +200,12 @@ export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
   ];
   const lists = wb.addWorksheet('Listes');
   lists.columns = [
-    { header: 'Types de bien', width: 34 },
-    { header: spec.allowCantons ? 'Localités et cantons' : 'Localités', width: 30 },
-    { header: 'Types de commerce', width: 20 },
+    { header: t("Types de bien"), width: 34 },
+    { header: spec.allowCantons ? t("Localités et cantons") : t("Localités"), width: 30 },
+    { header: t("Types de commerce"), width: 20 },
   ];
-  for (let i = 0; i < Math.max(TYPE_ENTRIES.length, zones.length); i++) {
-    lists.addRow([TYPE_ENTRIES[i]?.[1] ?? null, zones[i] ?? null, COMMERCIAL_TYPES[i]?.[1] ?? null]);
+  for (let i = 0; i < Math.max(typeEntries_.length, zones.length); i++) {
+    lists.addRow([typeEntries_[i]?.[1] ?? null, zones[i] ?? null, commerces[i]?.[1] ?? null]);
   }
   lists.getRow(1).font = { bold: true };
 
@@ -213,26 +217,26 @@ export async function downloadTemplate(spec: TemplateSpec): Promise<void> {
     const range = `${letter}2:${letter}${last}`;
     if (c.list === 'types') {
       dv.add(range, {
-        type: 'list', allowBlank: true, formulae: [`Listes!$A$2:$A$${TYPE_ENTRIES.length + 1}`],
-        showErrorMessage: true, errorTitle: c.header, error: 'Choisissez un type dans la liste.',
+        type: 'list', allowBlank: true, formulae: [`Listes!$A$2:$A$${typeEntries_.length + 1}`],
+        showErrorMessage: true, errorTitle: t(c.header), error: t("Choisissez un type dans la liste."),
       });
     } else if (c.list === 'zones') {
       dv.add(range, {
         type: 'list', allowBlank: true, formulae: [`Listes!$B$2:$B$${zones.length + 1}`],
-        showErrorMessage: true, errorTitle: c.header,
-        error: spec.allowCantons ? 'Choisissez une commune ou un canton dans la liste.' : 'Choisissez une commune romande dans la liste.',
+        showErrorMessage: true, errorTitle: t(c.header),
+        error: spec.allowCantons ? t("Choisissez une commune ou un canton dans la liste.") : t("Choisissez une commune romande dans la liste."),
       });
     } else if (c.list === 'commerce') {
       dv.add(range, {
-        type: 'list', allowBlank: true, formulae: [`Listes!$C$2:$C$${COMMERCIAL_TYPES.length + 1}`],
-        showErrorMessage: true, errorTitle: c.header, error: 'Choisissez un type dans la liste.',
+        type: 'list', allowBlank: true, formulae: [`Listes!$C$2:$C$${commerces.length + 1}`],
+        showErrorMessage: true, errorTitle: t(c.header), error: t("Choisissez un type dans la liste."),
       });
     } else if (c.list === 'yesno') {
-      dv.add(range, { type: 'list', allowBlank: true, formulae: ['"oui,non"'] });
+      dv.add(range, { type: 'list', allowBlank: true, formulae: [`"${t('oui')},${t('non')}"`] });
     } else if (c.scale) {
       dv.add(range, {
         type: 'whole', operator: 'between', allowBlank: true, formulae: [1, 5],
-        showErrorMessage: true, error: 'Nombre entier de 1 à 5.',
+        showErrorMessage: true, error: t("Nombre entier de 1 à 5."),
       });
     }
     if (c.money) ws.getColumn(i + 1).numFmt = "#'##0";
@@ -258,15 +262,17 @@ function cellText(v: unknown): string {
 /** Lit la feuille à remplir : une entrée par ligne non vide, colonnes repérées par leur titre */
 export async function readSheet(file: File, spec: TemplateSpec): Promise<{ line: number; values: Record<string, string> }[]> {
   if (!/\.xlsx$/i.test(file.name)) {
-    throw new Error('Format non pris en charge : enregistrez le fichier au format Excel (.xlsx).');
+    throw new Error(t("Format non pris en charge : enregistrez le fichier au format Excel (.xlsx)."));
   }
   const ExcelJS = await loadExcel();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(await file.arrayBuffer());
-  const ws = wb.getWorksheet(spec.sheet) ?? wb.worksheets[0];
-  if (!ws) throw new Error('Le fichier ne contient aucune feuille.');
+  // La feuille à remplir porte son nom dans l'une des quatre langues ; sinon la première
+  const ws = allTranslations(spec.sheet).map((n) => wb.getWorksheet(n)).find(Boolean) ?? wb.worksheets[0];
+  if (!ws) throw new Error(t("Le fichier ne contient aucune feuille."));
 
-  const byHeader = new Map(spec.columns.map((c) => [norm(c.header), c.key]));
+  // Titres de colonnes reconnus dans les quatre langues
+  const byHeader = new Map(spec.columns.flatMap((c) => allTranslations(c.header).map((h) => [norm(h), c.key] as [string, string])));
   const keyByCol = new Map<number, string>();
   ws.getRow(1).eachCell((cell, colNumber) => {
     const key = byHeader.get(norm(cellText(cell.value)).replace(/\s*\*$/, ''));
@@ -276,7 +282,7 @@ export async function readSheet(file: File, spec: TemplateSpec): Promise<{ line:
   const missing = spec.columns.filter((c) => c.required && !found.has(c.key));
   if (missing.length > 0) {
     throw new Error(
-      `Colonnes introuvables : ${missing.map((c) => c.header).join(', ')}. Utilisez le modèle sans modifier la ligne de titres.`,
+      t("Colonnes introuvables : {0}. Utilisez le modèle sans modifier la ligne de titres.", missing.map((c) => c.header).join(', ')),
     );
   }
 
@@ -290,7 +296,7 @@ export async function readSheet(file: File, spec: TemplateSpec): Promise<{ line:
     if (Object.values(values).some((v) => v !== '')) rows.push({ line, values });
   });
   if (rows.length > spec.maxRows) {
-    throw new Error(`Le fichier contient ${rows.length} lignes : ${spec.maxRows} au maximum par import.`);
+    throw new Error(t("Le fichier contient {0} lignes : {1} au maximum par import.", rows.length, spec.maxRows));
   }
   return rows;
 }

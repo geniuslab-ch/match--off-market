@@ -8,6 +8,7 @@
 import { supabase } from './supabase';
 import type { Property, PropertyType } from '../types';
 
+import { t } from '../i18n';
 export type RequestStatus = 'pending' | 'accepted' | 'declined';
 export type Initiator = 'buyer' | 'seller';
 
@@ -122,11 +123,11 @@ const NOT_INSTALLED =
   "La base de données n'est pas encore à jour : exécutez le fichier supabase_pilote.sql dans Supabase (SQL Editor).";
 
 async function call<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
-  if (!supabase) throw new Error('Supabase non configuré.');
+  if (!supabase) throw new Error(t("Supabase non configuré."));
   const { data, error } = await supabase.rpc(fn, args);
   if (error) {
     // PGRST202 = fonction introuvable : le script SQL n'a pas été exécuté
-    if (error.code === 'PGRST202' || error.code === '42883') throw new Error(NOT_INSTALLED);
+    if (error.code === 'PGRST202' || error.code === '42883') throw new Error(t(NOT_INSTALLED));
     throw new Error(error.message);
   }
   return data as T;
@@ -149,7 +150,7 @@ export const proposeProperty = (propertyId: string, searchId: string) =>
   call<RequestStatus>('propose_property', { p_property_id: propertyId, p_search_id: searchId });
 
 export async function setPropertyActive(propertyId: string, isActive: boolean): Promise<void> {
-  if (!supabase) throw new Error('Supabase non configuré.');
+  if (!supabase) throw new Error(t("Supabase non configuré."));
   const { error } = await supabase.from('properties').update({ is_active: isActive }).eq('id', propertyId);
   if (error) throw new Error(error.message);
 }

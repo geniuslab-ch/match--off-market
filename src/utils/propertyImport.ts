@@ -4,6 +4,7 @@ import { dupKey, findCommerce, findCommune, findType, parseNumber, parseYesNo, r
 import { fieldRules } from './propertyFields';
 import type { ImportColumn, ImportedRow, TemplateSpec } from './excel';
 
+import { t } from '../i18n';
 export const PROPERTY_COLUMNS: ImportColumn[] = [
   { key: 'title', header: 'Titre', width: 34, required: true, help: 'Titre court du bien.', example: 'Appartement lumineux avec balcon' },
   { key: 'client_ref', header: 'Référence client / mandant', width: 22, help: 'Facultatif. N° de client ou nom du mandant. Visible de vous seul, jamais des acheteurs.', example: 'Mandat 2026-014' },
@@ -52,23 +53,23 @@ function validateProperty(line: number, v: Record<string, string>): ImportedRow 
   const errors: string[] = [];
 
   const title = (v.title ?? '').trim();
-  if (!title) errors.push('titre manquant');
+  if (!title) errors.push(t("titre manquant"));
 
   const type = findType(v.property_type ?? '');
-  if (!v.property_type) errors.push('type de bien manquant');
-  else if (!type) errors.push(`type de bien inconnu « ${v.property_type} »`);
+  if (!v.property_type) errors.push(t("type de bien manquant"));
+  else if (!type) errors.push(t("type de bien inconnu « {0} »", v.property_type));
 
   const zone = findCommune(v.zone ?? '');
-  if (!v.zone) errors.push('localité manquante');
-  else if (!zone) errors.push(`localité inconnue « ${v.zone} » (commune romande attendue)`);
+  if (!v.zone) errors.push(t("localité manquante"));
+  else if (!zone) errors.push(t("localité inconnue « {0} » (commune romande attendue)", v.zone));
 
   const price = parseNumber(v.price);
-  if (price == null) errors.push('prix manquant');
-  else if (Number.isNaN(price) || price <= 0) errors.push(`prix invalide « ${v.price} »`);
+  if (price == null) errors.push(t("prix manquant"));
+  else if (Number.isNaN(price) || price <= 0) errors.push(t("prix invalide « {0} »", v.price));
 
   const surface = parseNumber(v.surface_m2);
-  if (surface == null) errors.push('surface manquante');
-  else if (Number.isNaN(surface) || surface <= 0) errors.push(`surface invalide « ${v.surface_m2} »`);
+  if (surface == null) errors.push(t("surface manquante"));
+  else if (Number.isNaN(surface) || surface <= 0) errors.push(t("surface invalide « {0} »", v.surface_m2));
 
   // Champs propres au type : ignorés s'ils ne le concernent pas
   const rules = fieldRules(type ?? 'apartment');
@@ -76,35 +77,35 @@ function validateProperty(line: number, v: Record<string, string>): ImportedRow 
     const n = parseNumber(v[key]);
     if (!applies || n == null) return null;
     if (Number.isNaN(n) || n <= 0 || n > max) {
-      errors.push(`${label} invalide « ${v[key]} »`);
+      errors.push(t("{0} invalide « {1} »", label, v[key]));
       return null;
     }
     return n;
   };
-  const rooms = count('rooms', 'pièces', rules.rooms, 50);
-  const units = count('units_count', "nombre d'appartements", rules.units, 1000);
-  const commercialUnits = count('commercial_units', 'surfaces commerciales', rules.commercialUnits, 1000);
-  const rent = count('annual_rent', 'état locatif', rules.yield, 1e9);
+  const rooms = count('rooms', t("pièces"), rules.rooms, 50);
+  const units = count('units_count', t("nombre d'appartements"), rules.units, 1000);
+  const commercialUnits = count('commercial_units', t("surfaces commerciales"), rules.commercialUnits, 1000);
+  const rent = count('annual_rent', t("état locatif"), rules.yield, 1e9);
   let commerce: string | null = null;
   if (rules.commercialType && (v.commercial_type ?? '') !== '') {
     commerce = findCommerce(v.commercial_type);
-    if (!commerce) errors.push(`type de commerce inconnu « ${v.commercial_type} »`);
+    if (!commerce) errors.push(t("type de commerce inconnu « {0} »", v.commercial_type));
   }
 
   const scale = (key: string, label: string) => {
     const n = parseNumber(v[key]);
     if (n == null) return 3;
     if (Number.isNaN(n) || n < 1 || n > 5) {
-      errors.push(`${label} doit être entre 1 et 5`);
+      errors.push(t("{0} doit être entre 1 et 5", label));
       return 3;
     }
     return Math.round(n);
   };
   const urgency = scale('urgency_level', 'urgence');
-  const rarity = scale('rarity_score', 'rareté');
+  const rarity = scale('rarity_score', t("rareté"));
 
   const age = parseNumber(v.listing_age_days);
-  if (age != null && (Number.isNaN(age) || age < 0)) errors.push(`« en vente depuis » invalide « ${v.listing_age_days} »`);
+  if (age != null && (Number.isNaN(age) || age < 0)) errors.push(t("« en vente depuis » invalide « {0} »", v.listing_age_days));
 
   const conditional = parseYesNo(v.is_conditional_sale);
   if ((v.is_conditional_sale ?? '') !== '' && conditional == null) errors.push('vente conditionnelle : oui ou non');

@@ -4,6 +4,7 @@ import { dupKey, findCommerce, findType, findZone, parseNumber, readSheet } from
 import { fieldRules } from './propertyFields';
 import type { ImportColumn, ImportedRow, TemplateSpec } from './excel';
 
+import { t } from '../i18n';
 export const SEARCH_COLUMNS: ImportColumn[] = [
   { key: 'label', header: 'Référence (privée)', width: 22, help: "Facultatif. Ex. nom du client. Visible de vous seul, jamais des vendeurs.", example: 'Client Dupont' },
   { key: 'desired_zone', header: 'Localité ou canton', width: 24, required: true, list: 'zones', help: 'Commune romande ou canton entier (« Canton de Vaud »), choisir dans la liste.', example: 'Lausanne' },
@@ -49,47 +50,47 @@ function validateSearch(line: number, v: Record<string, string>): ImportedRow {
   const errors: string[] = [];
 
   const zone = findZone(v.desired_zone ?? '', true);
-  if (!v.desired_zone) errors.push('localité ou canton manquant');
-  else if (!zone) errors.push(`zone inconnue « ${v.desired_zone} » (commune romande ou canton attendu)`);
+  if (!v.desired_zone) errors.push(t("localité ou canton manquant"));
+  else if (!zone) errors.push(t("zone inconnue « {0} » (commune romande ou canton attendu)", v.desired_zone));
 
   const type = findType(v.desired_property_type ?? '');
-  if (!v.desired_property_type) errors.push('type de bien manquant');
-  else if (!type) errors.push(`type de bien inconnu « ${v.desired_property_type} »`);
+  if (!v.desired_property_type) errors.push(t("type de bien manquant"));
+  else if (!type) errors.push(t("type de bien inconnu « {0} »", v.desired_property_type));
 
   const budget = parseNumber(v.budget_max);
-  if (budget == null) errors.push('budget manquant');
-  else if (Number.isNaN(budget) || budget <= 0) errors.push(`budget invalide « ${v.budget_max} »`);
+  if (budget == null) errors.push(t("budget manquant"));
+  else if (Number.isNaN(budget) || budget <= 0) errors.push(t("budget invalide « {0} »", v.budget_max));
 
   // Champs facultatifs : nombre positif ou vide
   const optional = (key: string, label: string, max = Infinity) => {
     const n = parseNumber(v[key]);
     if (n == null) return null;
     if (Number.isNaN(n) || n < 0 || n > max) {
-      errors.push(`${label} invalide « ${v[key]} »`);
+      errors.push(t("{0} invalide « {1} »", label, v[key]));
       return null;
     }
     return n > 0 ? n : null;
   };
   const apport = optional('personal_contribution', 'apport');
-  const smin = optional('desired_surface_min_m2', 'surface min');
-  const smax = optional('desired_surface_max_m2', 'surface max');
+  const smin = optional('desired_surface_min_m2', t("surface min"));
+  const smax = optional('desired_surface_max_m2', t("surface max"));
   // Champs propres au type : ignorés s'ils ne le concernent pas
   const rules = fieldRules(type ?? 'apartment');
   const only = <T,>(applies: boolean, value: T) => (applies ? value : null);
-  const rmin = only(rules.rooms, optional('desired_rooms_min', 'pièces min', 50));
-  const rmax = only(rules.rooms, optional('desired_rooms_max', 'pièces max', 50));
-  const umin = only(rules.units, optional('desired_units_min', 'appartements min', 1000));
-  const umax = only(rules.units, optional('desired_units_max', 'appartements max', 1000));
+  const rmin = only(rules.rooms, optional('desired_rooms_min', t("pièces min"), 50));
+  const rmax = only(rules.rooms, optional('desired_rooms_max', t("pièces max"), 50));
+  const umin = only(rules.units, optional('desired_units_min', t("appartements min"), 1000));
+  const umax = only(rules.units, optional('desired_units_max', t("appartements max"), 1000));
   const ymin = only(rules.yield, optional('min_gross_yield', 'rendement', 30));
   let commerce: string | null = null;
   if (rules.commercialType && (v.desired_commercial_type ?? '') !== '') {
     commerce = findCommerce(v.desired_commercial_type);
-    if (!commerce) errors.push(`type de commerce inconnu « ${v.desired_commercial_type} »`);
+    if (!commerce) errors.push(t("type de commerce inconnu « {0} »", v.desired_commercial_type));
   }
-  if (umin && umax && umin > umax) errors.push("appartements min supérieurs aux appartements max");
-  if (smin && smax && smin > smax) errors.push('surface min supérieure à la surface max');
-  if (rmin && rmax && rmin > rmax) errors.push('pièces min supérieures aux pièces max');
-  if (apport && budget && !Number.isNaN(budget) && apport > budget) errors.push("l'apport dépasse le budget");
+  if (umin && umax && umin > umax) errors.push(t("appartements min supérieurs aux appartements max"));
+  if (smin && smax && smin > smax) errors.push(t("surface min supérieure à la surface max"));
+  if (rmin && rmax && rmin > rmax) errors.push(t("pièces min supérieures aux pièces max"));
+  if (apport && budget && !Number.isNaN(budget) && apport > budget) errors.push(t("l'apport dépasse le budget"));
 
   if (errors.length > 0 || !zone || !type || budget == null) {
     return { line, values: v, payload: null, errors };

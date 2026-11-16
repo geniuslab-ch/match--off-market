@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { User, UserRole } from '../types';
 
+import { t } from '../i18n';
 interface SignUpResult {
   error: string | null;
   hasSession: boolean;
@@ -108,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     role: UserRole,
     isProfessional = false
   ): Promise<SignUpResult> {
-    if (!supabase) return { error: 'Supabase non configuré', hasSession: false };
+    if (!supabase) return { error: t("Supabase non configuré"), hasSession: false };
 
     authActionInProgress.current = true;
 
@@ -127,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) return { error: error.message, hasSession: false };
-      if (!data.user) return { error: 'Erreur lors de la création du compte', hasSession: false };
+      if (!data.user) return { error: t("Erreur lors de la création du compte"), hasSession: false };
 
       // Stocker la session immédiatement si elle existe
       if (data.session) {
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function signIn(email: string, password: string): Promise<string | null> {
-    if (!supabase) return 'Supabase non configuré';
+    if (!supabase) return t("Supabase non configuré");
 
     authActionInProgress.current = true;
 
@@ -183,6 +184,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth doit être utilisé dans un AuthProvider');
+  if (!ctx) throw new Error(t("useAuth doit être utilisé dans un AuthProvider"));
   return ctx;
 }

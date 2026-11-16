@@ -29,6 +29,7 @@ import {
   HOUSE_TYPE_LABELS,
   COMMERCIAL_TYPE_LABELS,
   FLOOR_OPTIONS,
+  floorLabel,
   EXTERIOR_OPTIONS,
   PARKING_TYPE_OPTIONS,
   BONUS_OPTIONS,
@@ -40,6 +41,7 @@ import { fieldRules, grossYield, pct } from '../utils/propertyFields';
 import { propertyKey } from '../utils/propertyImport';
 import Brand from './Brand';
 
+import { t, LanguageSwitcher } from '../i18n';
 export default function SellerForm() {
   const { user } = useAuth();
   const isPro = Boolean(user?.is_professional);
@@ -91,7 +93,7 @@ export default function SellerForm() {
       .then(({ data, error: err }) => {
         if (!alive) return;
         if (err || !data) {
-          setError("Ce bien est introuvable ou ne vous appartient pas.");
+          setError(t("Ce bien est introuvable ou ne vous appartient pas."));
         } else {
           const p = data as Record<string, unknown>;
           const str = (v: unknown) => (v === null || v === undefined ? '' : String(v));
@@ -172,11 +174,11 @@ export default function SellerForm() {
     e.preventDefault();
 
     if (!supabase) {
-      setError('Supabase non configuré. Contactez l\'administrateur.');
+      setError(t("Supabase non configuré. Contactez l'administrateur."));
       return;
     }
     if (!user) {
-      setError('Vous devez être connecté pour publier un bien. Rechargez la page et reconnectez-vous.');
+      setError(t("Vous devez être connecté pour publier un bien. Rechargez la page et reconnectez-vous."));
       return;
     }
 
@@ -190,7 +192,7 @@ export default function SellerForm() {
       const twin = (data ?? []).find((p) => propertyKey(p) === k);
       if (twin) {
         setDupConfirmed(true);
-        setError(`Doublon possible : vous avez déjà publié « ${twin.title} » à ${twin.zone} au même prix. Cliquez à nouveau sur Publier pour l'enregistrer quand même.`);
+        setError(t("Doublon possible : vous avez déjà publié « {0} » à {1} au même prix. Cliquez à nouveau sur Publier pour l'enregistrer quand même.", twin.title, twin.zone));
         return;
       }
     }
@@ -242,19 +244,19 @@ export default function SellerForm() {
         navigate('/dashboard');
       }
     } catch (ex) {
-      setError(ex instanceof Error ? ex.message : 'Erreur inattendue lors de la publication.');
+      setError(ex instanceof Error ? ex.message : t("Erreur inattendue lors de la publication."));
     } finally {
       setLoading(false);
     }
   }
 
-  const urgencyLabels = ['', 'Pas pressé', 'Peu pressé', 'Modéré', 'Pressé', 'Très urgent'];
-  const rarityLabels = ['', 'Courant', 'Peu courant', 'Assez rare', 'Rare', 'Exceptionnel'];
+  const urgencyLabels = ['', t("Pas pressé"), t("Peu pressé"), t("Modéré"), t("Pressé"), t("Très urgent")];
+  const rarityLabels = ['', t("Courant"), t("Peu courant"), t("Assez rare"), t("Rare"), t("Exceptionnel")];
 
   if (loadingProperty) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">
-        Chargement du bien...
+        {t("Chargement du bien...")}
       </div>
     );
   }
@@ -265,18 +267,21 @@ export default function SellerForm() {
       <header className="border-b border-slate-800 bg-slate-900">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400">
-            <ArrowLeft className="h-4 w-4" /> Retour
+            <ArrowLeft className="h-4 w-4" />{' '}{t("Retour")}
           </button>
-          <Brand size="sm" />
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Brand size="sm" />
+          </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-slate-100">
-            {editId ? 'Modifier mon bien' : 'Ajouter un bien off-market'}
+            {editId ? t("Modifier mon bien") : t("Ajouter un bien off-market")}
           </h1>
-          <p className="mt-1 text-slate-400">Publiez votre bien de manière confidentielle</p>
+          <p className="mt-1 text-slate-400">{t("Publiez votre bien de manière confidentielle")}</p>
         </div>
 
         {/* Score vendeur en temps réel */}
@@ -287,13 +292,13 @@ export default function SellerForm() {
             {liveScore}
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-100">Score motivation : {liveScore}/100</p>
+            <p className="text-sm font-medium text-slate-100">{t("Score motivation :")}{' '}{liveScore}/100</p>
             <p className="text-xs text-slate-400">
               {liveScore >= 85
-                ? 'Badge "Opportunité Rapide" affiché aux acheteurs'
+                ? t("Badge \"Opportunité Rapide\" affiché aux acheteurs")
                 : liveScore >= 75
-                  ? 'Badge "Vendeur Motivé" affiché aux acheteurs'
-                  : 'Votre bien sera visible — un score plus élevé le met en avant'}
+                  ? t("Badge \"Vendeur Motivé\" affiché aux acheteurs")
+                  : t("Votre bien sera visible — un score plus élevé le met en avant")}
             </p>
           </div>
         </div>
@@ -308,17 +313,17 @@ export default function SellerForm() {
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Informations du bien */}
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">Informations du bien</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">{t("Informations du bien")}</h2>
 
             <div>
               <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                <FileText className="h-3.5 w-3.5" /> Titre
+                <FileText className="h-3.5 w-3.5" />{' '}{t("Titre")}
               </label>
               <input
                 type="text"
                 value={form.title}
                 onChange={(e) => update('title', e.target.value)}
-                placeholder="Appartement lumineux au centre de Lausanne"
+                placeholder={t("Appartement lumineux au centre de Lausanne")}
                 required
                 className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
               />
@@ -327,14 +332,14 @@ export default function SellerForm() {
             {isPro && (
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Tag className="h-3.5 w-3.5" /> Référence client / mandant
-                  <span className="text-xs text-slate-500">(facultatif, visible de vous seul)</span>
+                  <Tag className="h-3.5 w-3.5" />{' '}{t("Référence client / mandant")}
+                  <span className="text-xs text-slate-500">{t("(facultatif, visible de vous seul)")}</span>
                 </label>
                 <input
                   type="text"
                   value={form.client_ref}
                   onChange={(e) => update('client_ref', e.target.value)}
-                  placeholder="N° de client ou nom du mandant"
+                  placeholder={t("N° de client ou nom du mandant")}
                   maxLength={80}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
                 />
@@ -343,12 +348,12 @@ export default function SellerForm() {
 
             <div>
               <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                <FileText className="h-3.5 w-3.5" /> Description
+                <FileText className="h-3.5 w-3.5" />{' '}{t("Description")}
               </label>
               <textarea
                 value={form.description}
                 onChange={(e) => update('description', e.target.value)}
-                placeholder="3.5 pièces rénové, vue lac, proche transports..."
+                placeholder={t("3.5 pièces rénové, vue lac, proche transports...")}
                 rows={3}
                 className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none resize-none"
               />
@@ -357,7 +362,7 @@ export default function SellerForm() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <Home className="h-3.5 w-3.5" /> Type de bien
+                  <Home className="h-3.5 w-3.5" />{' '}{t("Type de bien")}
                 </label>
                 <select
                   value={form.property_type}
@@ -372,7 +377,7 @@ export default function SellerForm() {
 
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  Zone
+                  {t("Zone")}
                 </label>
                 <CommuneSelect
                   value={form.zone}
@@ -384,16 +389,16 @@ export default function SellerForm() {
               {rules.floor && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Étage
+                    <Building2 className="h-3.5 w-3.5" />{' '}{t("Étage")}
                   </label>
                   <select
                     value={form.floor}
                     onChange={(e) => update('floor', e.target.value)}
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 focus:border-cyan-500 focus:outline-none"
                   >
-                    <option value="">Sélectionner...</option>
+                    <option value="">{t("Sélectionner...")}</option>
                     {FLOOR_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option key={opt.value} value={opt.value}>{floorLabel(opt.label)}</option>
                     ))}
                   </select>
                 </div>
@@ -403,14 +408,14 @@ export default function SellerForm() {
               {rules.houseType && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Home className="h-3.5 w-3.5" /> Type de maison
+                    <Home className="h-3.5 w-3.5" />{' '}{t("Type de maison")}
                   </label>
                   <select
                     value={form.house_type}
                     onChange={(e) => update('house_type', e.target.value)}
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 focus:border-cyan-500 focus:outline-none"
                   >
-                    <option value="">Sélectionner...</option>
+                    <option value="">{t("Sélectionner...")}</option>
                     {Object.entries(HOUSE_TYPE_LABELS).map(([val, label]) => (
                       <option key={val} value={val}>{label}</option>
                     ))}
@@ -422,14 +427,14 @@ export default function SellerForm() {
               {rules.commercialType && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> {rules.units ? 'Type de commerce' : 'Type de local'}
+                    <Building2 className="h-3.5 w-3.5" /> {rules.units ? t("Type de commerce") : t("Type de local")}
                   </label>
                   <select
                     value={form.commercial_type}
                     onChange={(e) => update('commercial_type', e.target.value)}
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 focus:border-cyan-500 focus:outline-none"
                   >
-                    <option value="">Sélectionner...</option>
+                    <option value="">{t("Sélectionner...")}</option>
                     {Object.entries(COMMERCIAL_TYPE_LABELS).map(([val, label]) => (
                       <option key={val} value={val}>{label}</option>
                     ))}
@@ -440,14 +445,14 @@ export default function SellerForm() {
               {/* Situation — Tous types */}
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <MapPin className="h-3.5 w-3.5" /> Situation
+                  <MapPin className="h-3.5 w-3.5" />{' '}{t("Situation")}
                 </label>
                 <select
                   value={form.situation}
                   onChange={(e) => update('situation', e.target.value)}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 focus:border-cyan-500 focus:outline-none"
                 >
-                  <option value="">Sélectionner...</option>
+                  <option value="">{t("Sélectionner...")}</option>
                   {Object.entries(SITUATION_LABELS).map(([val, label]) => (
                     <option key={val} value={val}>{label}</option>
                   ))}
@@ -456,7 +461,7 @@ export default function SellerForm() {
 
               <div>
                 <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                  <BadgeSwissFranc className="h-3.5 w-3.5" /> Prix (CHF)
+                  <BadgeSwissFranc className="h-3.5 w-3.5" />{' '}{t("Prix (CHF)")}
                 </label>
                 <MoneyInput
                   value={form.price}
@@ -485,7 +490,7 @@ export default function SellerForm() {
               {rules.rooms && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <DoorOpen className="h-3.5 w-3.5" /> Pièces
+                    <DoorOpen className="h-3.5 w-3.5" />{' '}{t("Pièces")}
                   </label>
                   <input
                     type="number"
@@ -502,7 +507,7 @@ export default function SellerForm() {
               {rules.units && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Nombre d'appartements
+                    <Building2 className="h-3.5 w-3.5" />{' '}{t("Nombre d'appartements")}
                   </label>
                   <input
                     type="number"
@@ -519,7 +524,7 @@ export default function SellerForm() {
               {rules.commercialUnits && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <Building2 className="h-3.5 w-3.5" /> Nombre de surfaces commerciales
+                    <Building2 className="h-3.5 w-3.5" />{' '}{t("Nombre de surfaces commerciales")}
                   </label>
                   <input
                     type="number"
@@ -536,8 +541,8 @@ export default function SellerForm() {
               {rules.yield && (
                 <div className="col-span-2">
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    <BadgeSwissFranc className="h-3.5 w-3.5" /> État locatif annuel (CHF, loyers hors charges)
-                    <span className="text-xs text-slate-500">(facultatif)</span>
+                    <BadgeSwissFranc className="h-3.5 w-3.5" />{' '}{t("État locatif annuel (CHF, loyers hors charges)")}
+                    <span className="text-xs text-slate-500">{t("(facultatif)")}</span>
                   </label>
                   <MoneyInput
                     value={form.annual_rent}
@@ -547,8 +552,8 @@ export default function SellerForm() {
                   />
                   <p className="mt-1 text-xs text-slate-400">
                     {yieldPct !== null
-                      ? `Rendement brut : ${pct(yieldPct)}. Les acheteurs qui cherchent un rendement minimum le voient.`
-                      : 'Permet de calculer le rendement brut, le premier critère des investisseurs.'}
+                      ? t("Rendement brut : {0}. Les acheteurs qui cherchent un rendement minimum le voient.", pct(yieldPct))
+                      : t("Permet de calculer le rendement brut, le premier critère des investisseurs.")}
                   </p>
                 </div>
               )}
@@ -559,7 +564,7 @@ export default function SellerForm() {
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
               <TreePine className="mr-1.5 inline h-4 w-4" />
-              Extérieur
+              {t("Extérieur")}
             </h2>
 
             <div className="flex gap-2 mb-2">
@@ -572,7 +577,7 @@ export default function SellerForm() {
                     : 'border-slate-600 bg-slate-900 text-slate-400 hover:border-slate-500'
                 }`}
               >
-                Aucun
+                {t("Aucun")}
               </button>
               <button
                 type="button"
@@ -583,7 +588,7 @@ export default function SellerForm() {
                     : 'border-slate-600 bg-slate-900 text-slate-400 hover:border-slate-500'
                 }`}
               >
-                Tous
+                {t("Tous")}
               </button>
             </div>
 
@@ -603,7 +608,7 @@ export default function SellerForm() {
                     onChange={() => toggleArrayItem('exterior', option)}
                     className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                   />
-                  {option}
+                  {t(option)}
                 </label>
               ))}
             </div>
@@ -613,7 +618,7 @@ export default function SellerForm() {
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
               <Car className="mr-1.5 inline h-4 w-4" />
-              Parking
+              {t("Parking")}
             </h2>
 
             <div className="grid grid-cols-1 gap-2">
@@ -632,14 +637,14 @@ export default function SellerForm() {
                     onChange={() => toggleArrayItem('parking_types', opt.value)}
                     className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                   />
-                  {opt.label}
+                  {t(opt.label)}
                 </label>
               ))}
             </div>
 
             {form.parking_types.length > 0 && (
               <div>
-                <label className="mb-1 text-sm text-slate-400">Nombre total de places</label>
+                <label className="mb-1 text-sm text-slate-400">{t("Nombre total de places")}</label>
                 <input
                   type="number"
                   value={form.parking_quantity}
@@ -656,7 +661,7 @@ export default function SellerForm() {
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">
               <Sparkles className="mr-1.5 inline h-4 w-4" />
-              Bonus
+              {t("Bonus")}
             </h2>
 
             <div className="grid grid-cols-1 gap-2">
@@ -675,7 +680,7 @@ export default function SellerForm() {
                     onChange={() => toggleArrayItem('bonuses', option)}
                     className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                   />
-                  {option}
+                  {t(option)}
                 </label>
               ))}
             </div>
@@ -683,12 +688,12 @@ export default function SellerForm() {
 
           {/* Critères de scoring vendeur */}
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6 space-y-4">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">Critères de scoring</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">{t("Critères de scoring")}</h2>
 
             {/* Urgence */}
             <div>
               <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-400">
-                <Flame className="h-3.5 w-3.5" /> Niveau d'urgence : {urgencyLabels[Number(form.urgency_level)]}
+                <Flame className="h-3.5 w-3.5" />{' '}{t("Niveau d'urgence :")}{' '}{urgencyLabels[Number(form.urgency_level)]}
               </label>
               <input
                 type="range"
@@ -699,14 +704,14 @@ export default function SellerForm() {
                 className="w-full accent-cyan-500"
               />
               <div className="flex justify-between text-xs text-slate-500">
-                <span>Pas pressé</span><span>Très urgent</span>
+                <span>{t("Pas pressé")}</span><span>{t("Très urgent")}</span>
               </div>
             </div>
 
             {/* Ancienneté */}
             <div>
               <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                <Clock className="h-3.5 w-3.5" /> En vente depuis (jours)
+                <Clock className="h-3.5 w-3.5" />{' '}{t("En vente depuis (jours)")}
               </label>
               <input
                 type="number"
@@ -717,14 +722,14 @@ export default function SellerForm() {
                 className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none"
               />
               <p className="mt-1 text-xs text-slate-500">
-                Plus l'annonce est ancienne, plus le score augmente (max à 90 jours)
+                {t("Plus l'annonce est ancienne, plus le score augmente (max à 90 jours)")}
               </p>
             </div>
 
             {/* Rareté */}
             <div>
               <label className="mb-2 flex items-center gap-1.5 text-sm text-slate-400">
-                <Star className="h-3.5 w-3.5" /> Rareté du bien : {rarityLabels[Number(form.rarity_score)]}
+                <Star className="h-3.5 w-3.5" />{' '}{t("Rareté du bien :")}{' '}{rarityLabels[Number(form.rarity_score)]}
               </label>
               <input
                 type="range"
@@ -735,7 +740,7 @@ export default function SellerForm() {
                 className="w-full accent-cyan-500"
               />
               <div className="flex justify-between text-xs text-slate-500">
-                <span>Courant</span><span>Exceptionnel</span>
+                <span>{t("Courant")}</span><span>{t("Exceptionnel")}</span>
               </div>
             </div>
 
@@ -750,10 +755,10 @@ export default function SellerForm() {
                 />
                 <div>
                   <p className={`text-sm font-medium ${form.is_conditional_sale ? 'text-red-400' : 'text-slate-300'}`}>
-                    Vente conditionnelle
+                    {t("Vente conditionnelle")}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {form.is_conditional_sale ? '-20 pts (réduit le score)' : 'Non coché = +20 pts'}
+                    {form.is_conditional_sale ? t("-20 pts (réduit le score)") : t("Non coché = +20 pts")}
                   </p>
                 </div>
               </label>
@@ -762,9 +767,7 @@ export default function SellerForm() {
               <div className="flex items-start gap-2 rounded-lg bg-slate-900/50 px-4 py-3">
                 <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-500/70" />
                 <p className="text-xs text-slate-500">
-                  Une <strong className="text-slate-400">vente conditionnelle</strong> signifie que la vente est soumise à une ou plusieurs conditions suspensives
-                  (ex : obtention d'un permis de construire, vente préalable d'un autre bien, accord d'une copropriété, succession en cours, etc.).
-                  Cela peut ralentir le processus de transaction et réduit le score vendeur de 20 points.
+                  {t("Une")}{' '}<strong className="text-slate-400">{t("vente conditionnelle")}</strong>{' '}{t("signifie que la vente est soumise à une ou plusieurs conditions suspensives (ex : obtention d'un permis de construire, vente préalable d'un autre bien, accord d'une copropriété, succession en cours, etc.). Cela peut ralentir le processus de transaction et réduit le score vendeur de 20 points.")}
                 </p>
               </div>
 
@@ -772,12 +775,12 @@ export default function SellerForm() {
               {form.is_conditional_sale && (
                 <div>
                   <label className="mb-1 flex items-center gap-1.5 text-sm text-slate-400">
-                    Précisions sur les conditions
+                    {t("Précisions sur les conditions")}
                   </label>
                   <textarea
                     value={form.conditional_sale_details}
                     onChange={(e) => update('conditional_sale_details', e.target.value)}
-                    placeholder="Précisez les conditions de la vente (ex : en attente du permis de construire, vente d'un autre bien en cours...)"
+                    placeholder={t("Précisez les conditions de la vente (ex : en attente du permis de construire, vente d'un autre bien en cours...)")}
                     rows={3}
                     className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none resize-none"
                   />
@@ -794,10 +797,10 @@ export default function SellerForm() {
           >
             {loading ? (
               <span className="flex items-center justify-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" /> Publication...
+                <Loader2 className="h-4 w-4 animate-spin" />{' '}{t("Publication...")}
               </span>
             ) : (
-              editId ? 'Enregistrer les modifications' : 'Publier mon bien off-market'
+              editId ? t("Enregistrer les modifications") : t("Publier mon bien off-market")
             )}
           </button>
         </form>

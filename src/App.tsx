@@ -11,18 +11,19 @@ import Privacy from './components/Privacy';
 import PropertyImport from './components/PropertyImport';
 import SearchImport from './components/SearchImport';
 import type { ReactNode } from 'react';
+import { LanguageProvider, t } from './i18n';
 
 // Route protégée : redirige vers /auth si non connecté
 function PrivateRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">Chargement...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">{t("Chargement...")}</div>;
   return session ? <>{children}</> : <Navigate to="/auth" replace />;
 }
 
 // Redirige les utilisateurs déjà connectés
 function PublicRoute({ children }: { children: ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">Chargement...</div>;
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-500">{t("Chargement...")}</div>;
   return session ? <Navigate to="/dashboard" replace /> : <>{children}</>;
 }
 
@@ -67,7 +68,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <LanguageProvider>
+          <AppRoutes />
+        </LanguageProvider>
       </AuthProvider>
     </BrowserRouter>
   );

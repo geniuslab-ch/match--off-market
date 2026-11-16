@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { MapPin } from 'lucide-react';
 import { CANTONS, ROMANDIE_COMMUNES } from '../data/romandieCommunes';
 
+import { t, zoneLabel } from '../i18n';
 // Champ de recherche d'une localité de Suisse romande.
 // Si la localité n'est pas dans la liste, on peut la saisir telle quelle.
 export default function CommuneSelect({
@@ -26,7 +27,7 @@ export default function CommuneSelect({
   const cantons = useMemo(() => {
     if (!allowCantons) return [];
     const s = search.toLowerCase();
-    return CANTONS.filter((c) => !s || c.label.toLowerCase().includes(s)).map((c) => c.label);
+    return CANTONS.filter((c) => !s || c.label.toLowerCase().includes(s) || zoneLabel(c.label).toLowerCase().includes(s)).map((c) => c.label);
   }, [allowCantons, search]);
 
   const typed = search.trim();
@@ -48,7 +49,7 @@ export default function CommuneSelect({
         <MapPin className="mr-2 h-3.5 w-3.5 shrink-0 text-slate-400" />
         <input
           type="text"
-          value={open ? search : value}
+          value={open ? search : zoneLabel(value)}
           onChange={(e) => {
             setSearch(e.target.value);
             if (!open) setOpen(true);
@@ -57,8 +58,8 @@ export default function CommuneSelect({
             setOpen(true);
             setSearch('');
           }}
-          placeholder="Rechercher une localité..."
-          aria-label="Localité"
+          placeholder={t("Rechercher une localité...")}
+          aria-label={t("Localité")}
           className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 outline-none"
         />
       </div>
@@ -67,7 +68,7 @@ export default function CommuneSelect({
           {cantons.length > 0 && (
             <>
               <p className="px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Tout un canton
+                {t("Tout un canton")}
               </p>
               {cantons.map((label) => (
                 <button
@@ -78,11 +79,11 @@ export default function CommuneSelect({
                   }`}
                   onClick={() => choose(label)}
                 >
-                  {label}
+                  {zoneLabel(label)}
                 </button>
               ))}
               <p className="border-t border-slate-700 px-4 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                Une localité
+                {t("Une localité")}
               </p>
             </>
           )}
@@ -104,11 +105,11 @@ export default function CommuneSelect({
               className="w-full border-t border-slate-700 px-4 py-2 text-left text-sm text-cyan-400 hover:bg-slate-800"
               onClick={() => choose(typed)}
             >
-              Utiliser « {typed} »
+              {t('Utiliser « {0} »', typed)}
             </button>
           )}
           {filtered.length === 0 && cantons.length === 0 && !canUseTyped && (
-            <div className="px-4 py-3 text-sm text-slate-500">Aucune localité trouvée</div>
+            <div className="px-4 py-3 text-sm text-slate-500">{t("Aucune localité trouvée")}</div>
           )}
         </div>
       )}

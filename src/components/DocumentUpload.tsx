@@ -12,6 +12,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/AuthContext';
 
+import { t } from '../i18n';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Mo (même limite que le stockage Supabase)
 const ACCEPTED_TYPE = 'application/pdf';
 
@@ -36,18 +37,18 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
 
     // Validation type
     if (file.type !== ACCEPTED_TYPE) {
-      setError('Seuls les fichiers PDF sont acceptés.');
+      setError(t("Seuls les fichiers PDF sont acceptés."));
       return;
     }
 
     // Validation taille
     if (file.size > MAX_FILE_SIZE) {
-      setError(`Le fichier dépasse la taille maximale de 10 Mo (${(file.size / 1024 / 1024).toFixed(1)} Mo).`);
+      setError(t("Le fichier dépasse la taille maximale de 10 Mo ({0} Mo).", (file.size / 1024 / 1024).toFixed(1)));
       return;
     }
 
     if (!supabase || !user) {
-      setError('Vous devez être connecté pour uploader un document.');
+      setError(t("Vous devez être connecté pour uploader un document."));
       return;
     }
 
@@ -74,8 +75,8 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
       if (uploadError) {
         setError(
           /bucket not found/i.test(uploadError.message)
-            ? "L'espace de stockage des documents n'est pas encore créé : exécutez la dernière version de supabase_pilote.sql dans Supabase."
-            : `Erreur d'envoi : ${uploadError.message}`,
+            ? t("L'espace de stockage des documents n'est pas encore créé : exécutez la dernière version de supabase_pilote.sql dans Supabase.")
+            : t("Erreur d'envoi : {0}", uploadError.message),
         );
         return;
       }
@@ -83,7 +84,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
       setUploadedPath(filePath);
       onUploadComplete(filePath);
     } catch (ex) {
-      setError(ex instanceof Error ? ex.message : 'Erreur inattendue lors de l\'upload.');
+      setError(ex instanceof Error ? ex.message : t("Erreur inattendue lors de l'upload."));
     } finally {
       setUploading(false);
     }
@@ -118,22 +119,22 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-emerald-300">
-              Document chiffr&eacute; et transmis avec succ&egrave;s
+              {t("Document chiffré et transmis avec succès")}
             </p>
             <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
               <Lock className="h-3 w-3 text-emerald-500" />
-              <span>Stock&eacute; de mani&egrave;re s&eacute;curis&eacute;e &mdash; accessible uniquement par vous</span>
+              <span>{t("Stocké de manière sécurisée — accessible uniquement par vous")}</span>
             </div>
             <div className="mt-3 flex items-center gap-2">
               <span className="flex items-center gap-1.5 rounded-lg bg-slate-900/80 px-3 py-1.5 text-xs text-slate-300">
                 <FileText className="h-3.5 w-3.5 text-cyan-500" />
-                Pr&eacute;-approbation bancaire.pdf
+                {t("Pré-approbation bancaire.pdf")}
               </span>
               <button
                 type="button"
                 onClick={handleRemove}
                 className="rounded-lg p-1.5 text-slate-500 hover:bg-red-950 hover:text-red-400 transition-colors"
-                title="Supprimer le document"
+                title={t("Supprimer le document")}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -144,7 +145,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-emerald-950/40 px-3 py-2">
           <Shield className="h-4 w-4 text-emerald-500" />
           <p className="text-xs text-emerald-400/80">
-            +30 points ajout&eacute;s &agrave; votre score acheteur
+            {t("+30 points ajoutés à votre score acheteur")}
           </p>
         </div>
       </div>
@@ -176,7 +177,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
         {uploading ? (
           <div className="space-y-3">
             <Loader2 className="mx-auto h-10 w-10 animate-spin text-cyan-400" />
-            <p className="text-sm font-medium text-cyan-300">Chiffrement et transmission en cours...</p>
+            <p className="text-sm font-medium text-cyan-300">{t("Chiffrement et transmission en cours...")}</p>
             <div className="mx-auto h-1.5 w-48 overflow-hidden rounded-full bg-slate-700">
               <div className="h-full animate-pulse rounded-full bg-gradient-to-r from-cyan-500 to-cyan-400" style={{ width: '70%' }} />
             </div>
@@ -187,17 +188,17 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
               <UploadCloud className="h-7 w-7 text-slate-400 group-hover:text-cyan-400 transition-colors" />
             </div>
             <p className="mt-4 text-sm font-medium text-slate-200">
-              D&eacute;posez votre pr&eacute;-approbation bancaire ici
+              {t("Déposez votre pré-approbation bancaire ici")}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              ou <span className="text-cyan-400 underline underline-offset-2">parcourez vos fichiers</span>
+              {t("ou")}{' '}<span className="text-cyan-400 underline underline-offset-2">{t("parcourez vos fichiers")}</span>
             </p>
             <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-500">
               <span className="flex items-center gap-1">
-                <FileText className="h-3.5 w-3.5" /> PDF uniquement
+                <FileText className="h-3.5 w-3.5" />{' '}{t("PDF uniquement")}
               </span>
               <span>&bull;</span>
-              <span>10 Mo max</span>
+              <span>{t("10 Mo max")}</span>
             </div>
           </>
         )}
@@ -206,7 +207,7 @@ export default function DocumentUpload({ existingPath, onUploadComplete }: Docum
         <div className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-slate-900/60 px-3 py-2">
           <Lock className="h-3 w-3 text-cyan-600" />
           <p className="text-xs text-slate-500">
-            Document confidentiel &mdash; chiffr&eacute; et accessible uniquement par vous
+            {t("Document confidentiel — chiffré et accessible uniquement par vous")}
           </p>
         </div>
       </div>

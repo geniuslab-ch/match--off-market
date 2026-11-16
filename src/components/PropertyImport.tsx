@@ -7,7 +7,8 @@ import { markDuplicates } from '../utils/excel';
 import ExcelImportPage from './ExcelImportPage';
 import { propertyFeatureLabels } from '../utils/propertyFields';
 
-const chf = (n: unknown) => `${Number(n).toLocaleString('fr-CH')} CHF`;
+import { loc, t } from '../i18n';
+const chf = (n: unknown) => `${Number(n).toLocaleString(loc())} CHF`;
 
 // Import de biens à vendre depuis Excel (page /seller/import)
 export default function PropertyImport() {
@@ -15,10 +16,10 @@ export default function PropertyImport() {
 
   return (
     <ExcelImportPage
-      title="Importer des biens à vendre depuis Excel"
-      intro={`Ajoutez tout votre portefeuille en une fois : une ligne par bien, jusqu'à ${PROPERTY_TEMPLATE.maxRows} biens.`}
+      title={t("Importer des biens à vendre depuis Excel")}
+      intro={t("Ajoutez tout votre portefeuille en une fois : une ligne par bien, jusqu'à {0} biens.", PROPERTY_TEMPLATE.maxRows)}
       template={PROPERTY_TEMPLATE}
-      thing={['bien', 'biens']}
+      thing={[t('bien'), t('biens')]}
       parse={async (file) => {
         const rows = await parsePropertyFile(file);
         // Doublons : biens déjà publiés par ce compte, ou lignes répétées dans le fichier
@@ -30,17 +31,17 @@ export default function PropertyImport() {
         return markDuplicates(rows, propertyKey, existing);
       }}
       preview={[
-        { label: 'Titre', render: (r) => r.values.title },
-        { label: 'Réf.', render: (r) => r.values.client_ref },
+        { label: t("Titre"), render: (r) => r.values.title },
+        { label: t("Réf."), render: (r) => r.values.client_ref },
         {
-          label: 'Type',
+          label: t("Type"),
           render: (r) => (r.payload ? PROPERTY_TYPE_LABELS[r.payload.property_type as PropertyType] : r.values.property_type),
         },
-        { label: 'Localité', render: (r) => (r.payload ? String(r.payload.zone) : r.values.zone) },
-        { label: 'Prix', right: true, render: (r) => (r.payload ? chf(r.payload.price) : r.values.price) },
+        { label: t("Localité"), render: (r) => (r.payload ? String(r.payload.zone) : r.values.zone) },
+        { label: t("Prix"), right: true, render: (r) => (r.payload ? chf(r.payload.price) : r.values.price) },
         { label: 'm²', right: true, render: (r) => (r.payload ? String(r.payload.surface_m2) : r.values.surface_m2) },
         {
-          label: 'Caractéristiques',
+          label: t("Caractéristiques"),
           render: (r) =>
             r.payload
               ? propertyFeatureLabels(r.payload as Parameters<typeof propertyFeatureLabels>[0]).join(' · ')
@@ -48,7 +49,7 @@ export default function PropertyImport() {
         },
       ]}
       onImport={async (rows) => {
-        if (!supabase || !user) throw new Error('Vous devez être connecté.');
+        if (!supabase || !user) throw new Error(t("Vous devez être connecté."));
         let done = 0;
         // Par paquets de 50, pour rester sous les limites de la base
         for (let i = 0; i < rows.length; i += 50) {
@@ -57,8 +58,8 @@ export default function PropertyImport() {
           if (error) {
             throw new Error(
               done > 0
-                ? `${done} biens importés, puis erreur : ${error.message}. Vérifiez votre espace avant de relancer, pour éviter les doublons.`
-                : `Erreur lors de l'import : ${error.message}`,
+                ? t("{0} biens importés, puis erreur : {1}. Vérifiez votre espace avant de relancer, pour éviter les doublons.", done, error.message)
+                : t("Erreur lors de l'import : {0}", error.message),
             );
           }
           done += chunk.length;
@@ -66,9 +67,11 @@ export default function PropertyImport() {
         return done;
       }}
       successText={(k) =>
-        `${k} bien${k > 1 ? 's' : ''} importé${k > 1 ? 's' : ''}. Ils sont visibles des acheteurs qualifiés dont la recherche correspond.`
+        k > 1
+          ? t("{0} biens importés. Ils sont visibles des acheteurs qualifiés dont la recherche correspond.", k)
+          : t("{0} bien importé. Il est visible des acheteurs qualifiés dont la recherche correspond.", k)
       }
-      successLink={{ label: 'Voir mes biens', to: '/dashboard' }}
+      successLink={{ label: t("Voir mes biens"), to: '/dashboard' }}
     />
   );
 }

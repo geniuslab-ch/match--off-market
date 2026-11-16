@@ -9,6 +9,7 @@
 import { COMMERCIAL_TYPE_LABELS } from '../types';
 import type { CommercialType, PropertyType } from '../types';
 
+import { loc, t } from '../i18n';
 export type FieldSet = 'residential' | 'investment' | 'mixed' | 'land' | 'commercial';
 
 export function fieldSetOf(type: PropertyType | string): FieldSet {
@@ -48,11 +49,11 @@ export function fieldRules(type: PropertyType | string): FieldRules {
   const set = fieldSetOf(type);
   return {
     surfaceLabel: {
-      residential: 'Surface habitable (m²)',
-      investment: 'Surface habitable totale (m²)',
-      mixed: 'Surface totale, logements et commerces (m²)',
-      land: 'Surface du terrain (m²)',
-      commercial: 'Surface du local (m²)',
+      residential: t("Surface habitable (m²)"),
+      investment: t("Surface habitable totale (m²)"),
+      mixed: t("Surface totale, logements et commerces (m²)"),
+      land: t("Surface du terrain (m²)"),
+      commercial: t("Surface du local (m²)"),
     }[set],
     rooms: set === 'residential',
     units: set === 'investment' || set === 'mixed',
@@ -64,7 +65,8 @@ export function fieldRules(type: PropertyType | string): FieldRules {
   };
 }
 
-export const COMMERCIAL_TYPES = Object.entries(COMMERCIAL_TYPE_LABELS) as [CommercialType, string][];
+/** Types de commerce [clé, libellé dans la langue choisie] */
+export const commercialTypes = () => Object.entries(COMMERCIAL_TYPE_LABELS) as [CommercialType, string][];
 
 /** Rendement brut en % (état locatif annuel / prix), ou null si inconnu */
 export function grossYield(annualRent: number | null | undefined, price: number | null | undefined): number | null {
@@ -74,7 +76,7 @@ export function grossYield(annualRent: number | null | undefined, price: number 
   return (rent / p) * 100;
 }
 
-export const pct = (n: number) => `${n.toLocaleString('fr-CH', { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %`;
+export const pct = (n: number) => `${n.toLocaleString(loc(), { minimumFractionDigits: 1, maximumFractionDigits: 2 })} %`;
 
 export type FeatureKind = 'rooms' | 'units' | 'commerce' | 'yield';
 
@@ -88,13 +90,13 @@ export function searchFeatures(c: {
   min_yield?: number | null;
 }): { kind: FeatureKind; text: string }[] {
   const out: { kind: FeatureKind; text: string | null }[] = [
-    { kind: 'rooms', text: rangeLabel(c.rooms_min, c.rooms_max, 'pièce', 'pièces') },
-    { kind: 'units', text: rangeLabel(c.units_min, c.units_max, 'appartement', 'appartements') },
+    { kind: 'rooms', text: rangeLabel(c.rooms_min, c.rooms_max, t("pièce"), t("pièces")) },
+    { kind: 'units', text: rangeLabel(c.units_min, c.units_max, t('appartement'), t('appartements')) },
     {
       kind: 'commerce',
-      text: c.commercial_type ? `commerce : ${COMMERCIAL_TYPE_LABELS[c.commercial_type as CommercialType] ?? c.commercial_type}` : null,
+      text: c.commercial_type ? t('commerce : {0}', COMMERCIAL_TYPE_LABELS[c.commercial_type as CommercialType] ?? c.commercial_type) : null,
     },
-    { kind: 'yield', text: Number(c.min_yield) > 0 ? `rendement brut dès ${pct(Number(c.min_yield))}` : null },
+    { kind: 'yield', text: Number(c.min_yield) > 0 ? t("rendement brut dès {0}", pct(Number(c.min_yield))) : null },
   ];
   return out.filter((x): x is { kind: FeatureKind; text: string } => Boolean(x.text));
 }
@@ -109,10 +111,10 @@ export function searchFeatureLabels(c: {
   min_yield?: number | null;
 }): string[] {
   const out: (string | null)[] = [
-    rangeLabel(c.rooms_min, c.rooms_max, 'pièce', 'pièces'),
-    rangeLabel(c.units_min, c.units_max, 'appartement', 'appartements'),
-    c.commercial_type ? `commerce : ${COMMERCIAL_TYPE_LABELS[c.commercial_type as CommercialType] ?? c.commercial_type}` : null,
-    Number(c.min_yield) > 0 ? `rendement brut dès ${pct(Number(c.min_yield))}` : null,
+    rangeLabel(c.rooms_min, c.rooms_max, t("pièce"), t("pièces")),
+    rangeLabel(c.units_min, c.units_max, t('appartement'), t('appartements')),
+    c.commercial_type ? t('commerce : {0}', COMMERCIAL_TYPE_LABELS[c.commercial_type as CommercialType] ?? c.commercial_type) : null,
+    Number(c.min_yield) > 0 ? t("rendement brut dès {0}", pct(Number(c.min_yield))) : null,
   ];
   return out.filter((x): x is string => Boolean(x));
 }
@@ -128,11 +130,11 @@ export function propertyFeatureLabels(p: {
 }): string[] {
   const y = grossYield(p.annual_rent, p.price);
   const out: (string | null)[] = [
-    Number(p.rooms) > 0 ? `${Number(p.rooms).toLocaleString('fr-CH')} p.` : null,
-    Number(p.units_count) > 0 ? `${p.units_count} appartement${Number(p.units_count) > 1 ? 's' : ''}` : null,
-    Number(p.commercial_units) > 0 ? `${p.commercial_units} commerce${Number(p.commercial_units) > 1 ? 's' : ''}` : null,
+    Number(p.rooms) > 0 ? t('{0} p.', Number(p.rooms).toLocaleString(loc())) : null,
+    Number(p.units_count) > 0 ? (Number(p.units_count) > 1 ? t('{0} appartements', p.units_count) : t('{0} appartement', p.units_count)) : null,
+    Number(p.commercial_units) > 0 ? (Number(p.commercial_units) > 1 ? t('{0} commerces', p.commercial_units) : t('{0} commerce', p.commercial_units)) : null,
     p.commercial_type ? COMMERCIAL_TYPE_LABELS[p.commercial_type as CommercialType] ?? p.commercial_type : null,
-    y !== null ? `rendement ${pct(y)}` : null,
+    y !== null ? t('rendement {0}', pct(y)) : null,
   ];
   return out.filter((x): x is string => Boolean(x));
 }
@@ -146,10 +148,10 @@ export function rangeLabel(
 ): string | null {
   const lo = Number(min) || 0;
   const hi = Number(max) || 0;
-  const f = (n: number) => n.toLocaleString('fr-CH');
+  const f = (n: number) => n.toLocaleString(loc());
   const unit = (n: number) => (n >= 2 ? many : one);
-  if (lo > 0 && hi > 0) return lo === hi ? `${f(lo)} ${unit(lo)}` : `${f(lo)} à ${f(hi)} ${many}`;
-  if (lo > 0) return `dès ${f(lo)} ${unit(lo)}`;
-  if (hi > 0) return `jusqu'à ${f(hi)} ${unit(hi)}`;
+  if (lo > 0 && hi > 0) return lo === hi ? `${f(lo)} ${unit(lo)}` : t('{0} à {1} {2}', f(lo), f(hi), many);
+  if (lo > 0) return t("dès {0} {1}", f(lo), unit(lo));
+  if (hi > 0) return t("jusqu'à {0} {1}", f(hi), unit(hi));
   return null;
 }

@@ -5,6 +5,7 @@ import { useAuth } from '../lib/AuthContext';
 import type { UserRole } from '../types';
 import Brand from './Brand';
 
+import { t, LanguageSwitcher } from '../i18n';
 // La page d'accueil peut ouvrir directement l'inscription : /auth?mode=inscription&role=seller
 const params = () => new URLSearchParams(window.location.search);
 
@@ -42,12 +43,12 @@ export default function Auth() {
 
     // Inscription
     if (!pseudo.trim()) {
-      setError('Le pseudo est requis');
+      setError(t("Le pseudo est requis"));
       setLoading(false);
       return;
     }
     if (!fullName.trim()) {
-      setError('Le nom complet est requis');
+      setError(t("Le nom complet est requis"));
       setLoading(false);
       return;
     }
@@ -71,34 +72,35 @@ export default function Auth() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo */}
         <div className="text-center">
-          <button type="button" onClick={() => navigate('/')} className="mx-auto block" aria-label="Retour à l'accueil">
+          <button type="button" onClick={() => navigate('/')} className="mx-auto block" aria-label={t("Retour à l'accueil")}>
             <Brand size="lg" />
           </button>
-          <p className="mt-4 text-sm text-slate-500">Réseau immobilier off-market</p>
+          <p className="mt-4 text-sm text-slate-500">{t("Réseau immobilier off-market")}</p>
+          <LanguageSwitcher className="mt-3 justify-center" />
         </div>
 
         {/* Formulaire */}
         <div className="rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-lg shadow-cyan-500/5">
           <h2 className="mb-6 text-center text-lg font-semibold text-slate-100">
-            {isLogin ? 'Connexion' : 'Créer un compte'}
+            {isLogin ? t("Connexion") : t("Créer un compte")}
           </h2>
 
           {emailConfirmation && (
             <div className="mb-4 space-y-3 rounded-lg bg-cyan-950 px-4 py-5 text-center">
               <Mail className="mx-auto h-8 w-8 text-cyan-400" />
               <p className="text-sm font-medium text-cyan-300">
-                Vérifiez votre boîte email
+                {t("Vérifiez votre boîte email")}
               </p>
               <p className="text-xs text-slate-400">
-                Un lien de confirmation a été envoyé à <strong className="text-slate-200">{email}</strong>.
-                Cliquez dessus pour activer votre compte, puis connectez-vous.
+                {t("Un lien de confirmation a été envoyé à")}{' '}<strong className="text-slate-200">{email}</strong>.{' '}
+                {t("Cliquez dessus pour activer votre compte, puis connectez-vous.")}
               </p>
               <button
                 type="button"
                 onClick={() => { setEmailConfirmation(false); setIsLogin(true); }}
                 className="mt-2 rounded-lg bg-cyan-500/20 px-4 py-2 text-sm text-cyan-400 hover:bg-cyan-500/30"
               >
-                Se connecter
+                {t("Se connecter")}
               </button>
             </div>
           )}
@@ -115,17 +117,17 @@ export default function Auth() {
             {!isLogin && (
               <div>
                 <label className="mb-1 block text-sm text-slate-400">
-                  Pseudo <span className="text-cyan-500">*</span>
+                  {t("Pseudo")}{' '}<span className="text-cyan-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={pseudo}
                   onChange={(e) => setPseudo(e.target.value)}
-                  placeholder="Investisseur42"
+                  placeholder={t("Investisseur42")}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
                 <p className="mt-1 text-xs text-cyan-500/70">
-                  Visible par les autres membres. Choisissez un pseudo discret.
+                  {t("Visible par les autres membres. Choisissez un pseudo discret.")}
                 </p>
               </div>
             )}
@@ -134,20 +136,20 @@ export default function Auth() {
             {!isLogin && (
               <div>
                 <label className="mb-1 block text-sm text-slate-400">
-                  Nom complet <span className="text-cyan-500">*</span>
+                  {t("Nom complet")}{' '}<span className="text-cyan-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Jean Dupont"
+                  placeholder={t("Jean Dupont")}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
                 />
                 {/* Notice confidentialité */}
                 <div className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-500">
                   <Lock className="mt-0.5 h-3 w-3 shrink-0 text-cyan-600" />
                   <span>
-                    Confidentiel. Votre identité ne sera révélée qu'après acceptation mutuelle d'un match par le propriétaire.
+                    {t("Confidentiel. Votre identité ne sera révélée qu'après acceptation mutuelle d'un match par le propriétaire.")}
                   </span>
                 </div>
               </div>
@@ -155,7 +157,7 @@ export default function Auth() {
 
             {/* Email */}
             <div>
-              <label className="mb-1 block text-sm text-slate-400">Email</label>
+              <label className="mb-1 block text-sm text-slate-400">{t("Email")}</label>
               <input
                 type="email"
                 value={email}
@@ -168,13 +170,13 @@ export default function Auth() {
 
             {/* Mot de passe */}
             <div>
-              <label className="mb-1 block text-sm text-slate-400">Mot de passe</label>
+              <label className="mb-1 block text-sm text-slate-400">{t("Mot de passe")}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Min. 6 caractères"
+                  placeholder={t("Min. 6 caractères")}
                   required
                   minLength={6}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-4 py-2.5 pr-10 text-slate-100 placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-1 focus:ring-cyan-500"
@@ -192,7 +194,7 @@ export default function Auth() {
             {/* Sélection du rôle (inscription uniquement) */}
             {!isLogin && (
               <div>
-                <label className="mb-2 block text-sm text-slate-400">Par quoi commencez-vous ?</label>
+                <label className="mb-2 block text-sm text-slate-400">{t("Par quoi commencez-vous ?")}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
@@ -204,7 +206,7 @@ export default function Auth() {
                     }`}
                   >
                     <UserCheck className="h-6 w-6" />
-                    <span className="text-sm font-medium">J'achète</span>
+                    <span className="text-sm font-medium">{t("J'achète")}</span>
                   </button>
                   <button
                     type="button"
@@ -216,11 +218,11 @@ export default function Auth() {
                     }`}
                   >
                     <Building2 className="h-6 w-6" />
-                    <span className="text-sm font-medium">Je vends</span>
+                    <span className="text-sm font-medium">{t("Je vends")}</span>
                   </button>
                 </div>
                 <p className="mt-2 text-xs text-slate-500">
-                  Un seul compte suffit : vous pourrez acheter et vendre depuis votre espace.
+                  {t("Un seul compte suffit : vous pourrez acheter et vendre depuis votre espace.")}
                 </p>
                 {role === 'seller' && (
                   <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-xl border border-slate-600 bg-slate-900 p-3">
@@ -231,9 +233,9 @@ export default function Auth() {
                       className="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
                     />
                     <span className="text-sm text-slate-300">
-                      Je suis un professionnel de l'immobilier
+                      {t("Je suis un professionnel de l'immobilier")}
                       <span className="block text-xs text-slate-500">
-                        Régie ou courtier. Vos biens porteront la mention « Professionnel », sans votre nom.
+                        {t("Régie ou courtier. Vos biens porteront la mention « Professionnel », sans votre nom.")}
                       </span>
                     </span>
                   </label>
@@ -248,30 +250,38 @@ export default function Auth() {
               className="w-full rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/25 transition-all hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
             >
               {loading
-                ? 'Chargement...'
+                ? t("Chargement...")
                 : isLogin
-                  ? 'Se connecter'
-                  : 'Créer mon compte'}
+                  ? t("Se connecter")
+                  : t("Créer mon compte")}
             </button>
             {!isLogin && (
               <p className="text-center text-xs leading-relaxed text-slate-500">
-                En créant un compte, vous confirmez avoir lu la{' '}
-                <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
-                  déclaration de confidentialité
-                </a>
-                .
+                {(() => {
+                  // Phrase complète dans chaque langue, le lien prend la place de {0}
+                  const [before, after = ''] = t("En créant un compte, vous confirmez avoir lu la {0}.").split('{0}');
+                  return (
+                    <>
+                      {before}
+                      <a href="/confidentialite" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
+                        {t("déclaration de confidentialité")}
+                      </a>
+                      {after}
+                    </>
+                  );
+                })()}
               </p>
             )}
           </form>
 
           {/* Toggle login/signup */}
           <p className="mt-6 text-center text-sm text-slate-500">
-            {isLogin ? "Pas encore de compte ?" : 'Déjà un compte ?'}{' '}
+            {isLogin ? t("Pas encore de compte ?") : t("Déjà un compte ?")}{' '}
             <button
               onClick={() => { setIsLogin(!isLogin); setError(null); }}
               className="font-medium text-cyan-400 hover:text-cyan-300"
             >
-              {isLogin ? "S'inscrire" : 'Se connecter'}
+              {isLogin ? t("S'inscrire") : t("Se connecter")}
             </button>
           </p>
         </div>

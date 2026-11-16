@@ -60,6 +60,7 @@ import Brand, { BRAND_NAME } from './Brand';
 import SearchCard from './SearchCard';
 import { propertyFeatureLabels, searchFeatureLabels } from '../utils/propertyFields';
 
+import { loc, t, zoneLabel, LanguageSwitcher } from '../i18n';
 // ============================================================
 // Données de démonstration : affichées UNIQUEMENT sur la page /demo,
 // jamais à une personne connectée.
@@ -115,7 +116,7 @@ const DEMO_PROPERTIES: Property[] = [
   },
 ];
 
-const chf = (n: number) => `${Number(n).toLocaleString('fr-CH')} CHF`;
+const chf = (n: number) => `${Number(n).toLocaleString(loc())} CHF`;
 
 // ============================================================
 // Petits composants partagés
@@ -142,7 +143,7 @@ function ContactCard({ contact, label }: { contact: Contact; label: string }) {
   return (
     <div className="rounded-xl border border-emerald-800 bg-emerald-950/50 p-3 text-sm">
       <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-emerald-400">{label}</p>
-      <p className="font-semibold text-slate-100">{contact.full_name || 'Nom non renseigné'}</p>
+      <p className="font-semibold text-slate-100">{contact.full_name || t("Nom non renseigné")}</p>
       {contact.email && (
         <a href={`mailto:${contact.email}`} className="mt-1 flex items-center gap-2 text-cyan-400 hover:underline">
           <Mail className="h-3.5 w-3.5" /> {contact.email}
@@ -223,7 +224,7 @@ function BuyerScoreCard({
   return (
     <div className="rounded-2xl border border-slate-700 bg-slate-800 p-6 shadow-lg shadow-cyan-500/5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-100">Votre profil acheteur</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t("Votre profil acheteur")}</h2>
         <div className="flex items-center gap-3">
           {onEdit && qualified && buyer.share_search !== false && (
             <a
@@ -232,20 +233,20 @@ function BuyerScoreCard({
               rel="noreferrer"
               className="text-sm text-slate-400 hover:text-cyan-400 hover:underline"
             >
-              Voir ma recherche comme un vendeur
+              {t("Voir ma recherche comme un vendeur")}
             </a>
           )}
           {onEdit && (
             <button onClick={onEdit} className="text-sm text-cyan-400 hover:underline">
-              Mettre à jour
+              {t("Mettre à jour")}
             </button>
           )}
-          <ScoreBadge score={score} threshold={80} label={qualified ? 'Qualifié' : 'Non qualifié'} />
+          <ScoreBadge score={score} threshold={80} label={qualified ? t("Qualifié") : t("Non qualifié")} />
         </div>
       </div>
 
       <div className="grid gap-x-8 gap-y-3 sm:grid-cols-2">
-        <ScoreBar value={buyer.budget_max > 0 ? 40 : 0} max={40} label="Budget renseigné" />
+        <ScoreBar value={buyer.budget_max > 0 ? 40 : 0} max={40} label={t("Budget renseigné")} />
         {(() => {
           // L'apport est évalué recherche par recherche : on affiche la fourchette
           const pcts = criteria
@@ -255,12 +256,12 @@ function BuyerScoreCard({
           const hi = pcts.length ? Math.max(...pcts) : parseFloat(contributionPct);
           const label =
             pcts.length > 1 && Math.round(lo) !== Math.round(hi)
-              ? `Apport (${Math.round(lo)} à ${Math.round(hi)} % selon la recherche)`
-              : `Apport (${Math.round(hi)} %)`;
+              ? t("Apport ({0} à {1} % selon la recherche)", Math.round(lo), Math.round(hi))
+              : t("Apport ({0} %)", Math.round(hi));
           return <ScoreBar value={hi >= 20 ? 20 : 0} max={20} label={label} />;
         })()}
-        <ScoreBar value={buyer.has_pre_approval ? 30 : 0} max={30} label="Pré-approbation bancaire" />
-        <ScoreBar value={buyer.debt_ratio <= 33 ? 10 : 0} max={10} label={`Endettement (${buyer.debt_ratio} %)`} />
+        <ScoreBar value={buyer.has_pre_approval ? 30 : 0} max={30} label={t("Pré-approbation bancaire")} />
+        <ScoreBar value={buyer.debt_ratio <= 33 ? 10 : 0} max={10} label={t("Endettement ({0} %)", buyer.debt_ratio)} />
       </div>
 
       {criteria.length > 0 && (
@@ -268,8 +269,8 @@ function BuyerScoreCard({
           {indexed.map(({ c, index }, i) => (
             <div key={index} className="grid grid-cols-2 gap-3 rounded-lg bg-slate-900 p-3 text-center text-xs sm:grid-cols-4">
               <div>
-                <p className="text-slate-400">{c.label ? c.label : `Recherche ${i + 1}`}</p>
-                <p className="font-semibold text-cyan-400">{c.desired_zone}</p>
+                <p className="text-slate-400">{c.label ? c.label : t("Recherche {0}", i + 1)}</p>
+                <p className="font-semibold text-cyan-400">{zoneLabel(c.desired_zone)}</p>
                 {onPurchased && (
                   <label className="mt-1.5 inline-flex cursor-pointer items-center gap-1.5 text-slate-400 hover:text-emerald-400">
                     <input
@@ -278,33 +279,33 @@ function BuyerScoreCard({
                       onChange={() => onPurchased(index)}
                       className="h-3.5 w-3.5 rounded border-slate-500 bg-slate-800 text-emerald-500"
                     />
-                    Acheté
+                    {t("Acheté")}
                   </label>
                 )}
               </div>
               <div>
-                <p className="text-slate-400">Budget max</p>
+                <p className="text-slate-400">{t("Budget max")}</p>
                 <p className="font-semibold text-slate-100">{chf(c.budget_max)}</p>
                 {Number(c.budget_max) > 0 && (
                   <p className={pctOf(c) >= 20 ? 'text-emerald-400' : 'text-amber-300'}>
-                    apport {chf(searchContribution(buyer, c))} ({Math.round(pctOf(c))} %)
+                    {t("apport {0} ({1} %)", chf(searchContribution(buyer, c)), Math.round(pctOf(c)))}
                   </p>
                 )}
               </div>
               <div>
-                <p className="text-slate-400">Type</p>
+                <p className="text-slate-400">{t("Type")}</p>
                 <p className="font-semibold text-slate-100">{PROPERTY_TYPE_LABELS[c.desired_property_type]}</p>
               </div>
               <div>
-                <p className="text-slate-400">Caractéristiques</p>
+                <p className="text-slate-400">{t("Caractéristiques")}</p>
                 <p className="font-semibold text-slate-100">
                   {c.desired_surface_min_m2 > 0 && c.desired_surface_max_m2 > 0
-                    ? `${c.desired_surface_min_m2} à ${c.desired_surface_max_m2} m²`
+                    ? t('{0} à {1} m²', c.desired_surface_min_m2, c.desired_surface_max_m2)
                     : c.desired_surface_min_m2 > 0
-                      ? `dès ${c.desired_surface_min_m2} m²`
+                      ? t("dès {0} m²", c.desired_surface_min_m2)
                       : c.desired_surface_max_m2 > 0
-                        ? `jusqu'à ${c.desired_surface_max_m2} m²`
-                        : 'Toute surface'}
+                        ? t("jusqu'à {0} m²", c.desired_surface_max_m2)
+                        : t("Toute surface")}
                 </p>
                 {searchFeatureLabels({
                   rooms_min: c.desired_rooms_min,
@@ -335,7 +336,7 @@ function SellerBadge({ sellerScore }: { sellerScore: number }) {
     <div className={`absolute bottom-3 left-3 flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur-sm ${
       high ? 'bg-orange-500/90 text-white' : 'bg-amber-500/90 text-slate-900'
     }`}>
-      {high ? <><Zap className="h-3 w-3" /> Opportunité rapide</> : <><Flame className="h-3 w-3" /> Vendeur motivé</>}
+      {high ? <><Zap className="h-3 w-3" />{' '}{t("Opportunité rapide")}</> : <><Flame className="h-3 w-3" />{' '}{t("Vendeur motivé")}</>}
     </div>
   );
 }
@@ -379,7 +380,7 @@ function MatchCard({
           </div>
         )}
         <div className="absolute left-3 top-3 rounded-full bg-gradient-to-r from-cyan-500 to-cyan-600 px-2.5 py-1 text-xs font-medium text-slate-950">
-          Off-market
+          {t("Off-market")}
         </div>
         <SellerBadge sellerScore={sellerScore} />
       </div>
@@ -393,7 +394,7 @@ function MatchCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-400">
-          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {property.zone}</span>
+          <span className="flex items-center gap-1"><MapPin className="h-3.5 w-3.5" /> {zoneLabel(property.zone)}</span>
           <span className="flex items-center gap-1"><Ruler className="h-3.5 w-3.5" /> {property.surface_m2} m²</span>
           {propertyFeatureLabels(property).map((t) => (
             <span key={t} className="flex items-center gap-1"><Home className="h-3.5 w-3.5" /> {t}</span>
@@ -403,7 +404,7 @@ function MatchCard({
         <div className="flex items-baseline justify-between">
           <span className="flex items-center gap-1 text-lg font-bold text-slate-100">
             <BadgeSwissFranc className="h-5 w-5 text-cyan-500" />
-            {Number(property.price).toLocaleString('fr-CH')}
+            {Number(property.price).toLocaleString(loc())}
           </span>
           <span className="rounded-full bg-slate-700 px-2 py-1 text-xs text-slate-400">
             {PROPERTY_TYPE_LABELS[property.property_type]}
@@ -412,27 +413,27 @@ function MatchCard({
 
         {preview ? (
           <p className="text-xs text-slate-500">
-            Ici, l'acheteur voit son score de matching et les critères qui correspondent à sa recherche.
+            {t("Ici, l'acheteur voit son score de matching et les critères qui correspondent à sa recherche.")}
           </p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            <CriteriaBadge ok={details.zone} label="Zone" />
-            <CriteriaBadge ok={details.price} label="Prix" />
-            <CriteriaBadge ok={details.type} label="Type" />
-            <CriteriaBadge ok={details.surface} label="Caractéristiques" />
+            <CriteriaBadge ok={details.zone} label={t("Zone")} />
+            <CriteriaBadge ok={details.price} label={t("Prix")} />
+            <CriteriaBadge ok={details.type} label={t("Type")} />
+            <CriteriaBadge ok={details.surface} label={t("Caractéristiques")} />
           </div>
         )}
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
           <span className="flex items-center gap-1.5">
-            <Star className="h-3.5 w-3.5" /> Motivation vendeur : {sellerScore}/100
+            <Star className="h-3.5 w-3.5" />{' '}{t("Motivation vendeur :")}{' '}{sellerScore}/100
           </span>
           {sellerType && (
             <span className="ml-auto flex items-center gap-1.5 rounded-full bg-slate-900 px-2 py-0.5 text-slate-300">
               {sellerType === 'professional' ? (
-                <><Building2 className="h-3.5 w-3.5" /> Professionnel</>
+                <><Building2 className="h-3.5 w-3.5" />{' '}{t("Professionnel")}</>
               ) : (
-                <><UserRound className="h-3.5 w-3.5" /> Propriétaire</>
+                <><UserRound className="h-3.5 w-3.5" />{' '}{t("Propriétaire")}</>
               )}
             </span>
           )}
@@ -440,35 +441,35 @@ function MatchCard({
 
         <div className="mt-auto pt-2">
           {contact ? (
-            <ContactCard contact={contact} label="Mise en relation acceptée" />
+            <ContactCard contact={contact} label={t("Mise en relation acceptée")} />
           ) : requestStatus === 'pending' && initiatedBy === 'seller' ? (
             <div className="rounded-xl border border-cyan-700 bg-cyan-950/40 p-3">
-              <p className="text-sm font-medium text-cyan-300">Le vendeur vous propose ce bien</p>
+              <p className="text-sm font-medium text-cyan-300">{t("Le vendeur vous propose ce bien")}</p>
               <div className="mt-3 flex gap-2">
                 <button
                   disabled={busy}
                   onClick={() => onRespond?.(false)}
                   className="flex-1 rounded-lg border border-slate-600 py-2 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
                 >
-                  Décliner
+                  {t("Décliner")}
                 </button>
                 <button
                   disabled={busy}
                   onClick={() => onRespond?.(true)}
                   className="flex-1 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
                 >
-                  Accepter
+                  {t("Accepter")}
                 </button>
               </div>
             </div>
           ) : requestStatus === 'pending' ? (
             <p className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm text-amber-300">
-              <Clock className="h-4 w-4" /> Demande envoyée, en attente de réponse
+              <Clock className="h-4 w-4" />{' '}{t("Demande envoyée, en attente de réponse")}
             </p>
           ) : requestStatus === 'declined' ? (
             <p className="flex items-center justify-center gap-2 rounded-lg bg-slate-900 py-2.5 text-sm text-slate-400">
               <XCircle className="h-4 w-4" />
-              {initiatedBy === 'seller' ? 'Vous avez décliné cette proposition' : 'Demande déclinée par le vendeur'}
+              {initiatedBy === 'seller' ? t("Vous avez décliné cette proposition") : t("Demande déclinée par le vendeur")}
             </p>
           ) : (
             <button
@@ -478,10 +479,10 @@ function MatchCard({
             >
               <Handshake className="h-4 w-4" />
               {demo
-                ? 'Disponible après inscription'
+                ? t("Disponible après inscription")
                 : busy
-                  ? 'Envoi...'
-                  : 'Demander une mise en relation'}
+                  ? t("Envoi...")
+                  : t("Demander une mise en relation")}
             </button>
           )}
         </div>
@@ -522,7 +523,7 @@ function BuyerView() {
         setMatches(res.matches);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur de chargement.');
+      setError(e instanceof Error ? e.message : t("Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -539,7 +540,7 @@ function BuyerView() {
       await requestContact(propertyId);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "La demande n'a pas pu être envoyée.");
+      setError(e instanceof Error ? e.message : t("La demande n'a pas pu être envoyée."));
     } finally {
       setBusyId(null);
     }
@@ -553,13 +554,13 @@ function BuyerView() {
       await respondContactRequest(requestId, accept);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "La réponse n'a pas pu être enregistrée.");
+      setError(e instanceof Error ? e.message : t("La réponse n'a pas pu être enregistrée."));
     } finally {
       setBusyId(null);
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-slate-500">Chargement...</div>;
+  if (loading) return <div className="py-20 text-center text-slate-500">{t("Chargement...")}</div>;
 
   if (!profile) {
     return (
@@ -567,21 +568,21 @@ function BuyerView() {
         {error && <ErrorBox message={error} />}
         <div className="rounded-2xl border-2 border-dashed border-cyan-500/40 bg-slate-800 p-8 text-center">
           <Plus className="mx-auto h-10 w-10 text-cyan-500/60" />
-          <h2 className="mt-3 text-lg font-semibold text-slate-100">Créez votre profil acheteur</h2>
+          <h2 className="mt-3 text-lg font-semibold text-slate-100">{t("Créez votre profil acheteur")}</h2>
           <p className="mt-1 text-sm text-slate-400">
-            Indiquez vos critères de recherche et votre situation financière pour accéder aux biens off-market.
+            {t("Indiquez vos critères de recherche et votre situation financière pour accéder aux biens off-market.")}
           </p>
           <button
             onClick={() => navigate('/buyer/new')}
             className="mt-4 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/25 hover:from-cyan-400 hover:to-cyan-500"
           >
-            Créer mon profil acheteur
+            {t("Créer mon profil acheteur")}
           </button>
           <button
             onClick={() => navigate('/buyer/import')}
             className="mx-auto mt-3 flex items-center justify-center gap-1.5 rounded-lg border border-slate-600 px-6 py-2.5 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
           >
-            <FileSpreadsheet className="h-4 w-4" /> Importer des recherches depuis Excel
+            <FileSpreadsheet className="h-4 w-4" />{' '}{t("Importer des recherches depuis Excel")}
           </button>
         </div>
       </>
@@ -600,7 +601,7 @@ function BuyerView() {
       .from('buyer_profiles')
       .update({ search_criteria: next, score: calculateBuyerScore(updated) })
       .eq('user_id', user.id);
-    if (err) setError(`La mise à jour n'a pas pu être enregistrée : ${err.message}`);
+    if (err) setError(t("La mise à jour n'a pas pu être enregistrée : {0}", err.message));
     await load();
   }
   const purchasedList = (profile.search_criteria ?? [])
@@ -615,19 +616,19 @@ function BuyerView() {
     <>
       {error && <ErrorBox message={error} />}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-100">Mes recherches</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t("Mes recherches")}</h2>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => navigate('/buyer/import')}
             className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
           >
-            <FileSpreadsheet className="h-4 w-4" /> Importer depuis Excel
+            <FileSpreadsheet className="h-4 w-4" />{' '}{t("Importer depuis Excel")}
           </button>
           <button
             onClick={() => navigate('/buyer/new')}
             className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
           >
-            <Plus className="h-4 w-4" /> Ajouter une recherche
+            <Plus className="h-4 w-4" />{' '}{t("Ajouter une recherche")}
           </button>
         </div>
       </div>
@@ -638,12 +639,12 @@ function BuyerView() {
       />
       {purchasedList.length > 0 && (
         <HistorySection
-          title="Historique des achats"
+          title={t("Historique des achats")}
           rows={purchasedList.map(({ c, index }) => ({
             key: String(index),
             date: c.purchased_at as string,
-            title: `${PROPERTY_TYPE_LABELS[c.desired_property_type]} · ${c.desired_zone}`,
-            detail: `Budget ${chf(c.budget_max)}`,
+            title: `${PROPERTY_TYPE_LABELS[c.desired_property_type]} · ${zoneLabel(c.desired_zone)}`,
+            detail: t("Budget {0}", chf(c.budget_max)),
             reference: c.label,
             onUndo: () => setPurchased(index, false),
           }))}
@@ -651,30 +652,30 @@ function BuyerView() {
       )}
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-100">Vos matchs</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t("Vos matchs")}</h2>
         <p className="mb-4 text-sm text-slate-400">
           {qualified
-            ? `${exactCount} bien${exactCount > 1 ? 's' : ''} dans votre zone${matches.length > exactCount ? `, ${matches.length - exactCount} hors zone` : ''}.`
-            : 'Les biens sont accessibles à partir de 80 points.'}
+            ? (exactCount > 1 ? t("{0} biens dans votre zone", exactCount) : t("{0} bien dans votre zone", exactCount)) +
+              (matches.length > exactCount ? t(", {0} hors zone", matches.length - exactCount) : '') +
+              '.'
+            : t("Les biens sont accessibles à partir de 80 points.")}
         </p>
 
         {!qualified ? (
           <EmptyBox icon={<Lock className="h-10 w-10" />}>
-            Votre score acheteur est inférieur à 80/100. Complétez votre profil (apport, pré-approbation bancaire)
-            pour accéder aux biens.
+            {t("Votre score acheteur est inférieur à 80/100. Complétez votre profil (apport, pré-approbation bancaire) pour accéder aux biens.")}
           </EmptyBox>
         ) : matches.length === 0 ? (
           <EmptyBox icon={<Home className="h-10 w-10" />}>
-            Aucun bien ne correspond à votre recherche pour le moment. Revenez bientôt : de nouveaux biens sont
-            ajoutés par les régies partenaires.
+            {t("Aucun bien ne correspond à votre recherche pour le moment. Revenez bientôt : de nouveaux biens sont ajoutés par les régies partenaires.")}
           </EmptyBox>
         ) : (
           <>
-          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filtrer par type de vendeur">
+          <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label={t("Filtrer par type de vendeur")}>
             {([
-              ['all', 'Tous les vendeurs'],
-              ['owner', 'Propriétaires uniquement'],
-              ['professional', 'Professionnels uniquement'],
+              ['all', t('Tous les vendeurs')],
+              ['owner', t('Propriétaires uniquement')],
+              ['professional', t('Professionnels uniquement')],
             ] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -692,20 +693,20 @@ function BuyerView() {
           </div>
           {shown.length === 0 && (
             <p className="rounded-xl bg-slate-900 px-4 py-6 text-center text-sm text-slate-400">
-              Aucun bien de ce type parmi vos matchs.
+              {t("Aucun bien de ce type parmi vos matchs.")}
             </p>
           )}
           {[
             {
               key: 'exact',
-              title: 'Matching exact',
-              help: 'Dans la localité que vous recherchez.',
+              title: t("Matching exact"),
+              help: t("Dans la localité que vous recherchez."),
               list: shown.filter((m) => m.details.zone),
             },
             {
               key: 'hors-zone',
-              title: 'Matching hors zone',
-              help: 'Ces biens correspondent à votre recherche, mais se trouvent dans une autre localité.',
+              title: t("Matching hors zone"),
+              help: t("Ces biens correspondent à votre recherche, mais se trouvent dans une autre localité."),
               list: shown.filter((m) => !m.details.zone),
             },
           ]
@@ -748,35 +749,35 @@ function BuyerView() {
 // ============================================================
 // Tarifs : ce qu'une mise en relation acceptée coûte au vendeur
 // ============================================================
-const money = (n: number) => `${Number(n).toLocaleString('fr-CH')} CHF hors TVA`;
+const money = (n: number) => t("{0} CHF hors TVA", Number(n).toLocaleString(loc()));
 
 /** Phrases affichées au vendeur avant qu'il accepte ou propose. `terms` vaut null si la base ne les fournit pas. */
 function billingLines(terms: BillingTerms | null): string[] {
-  if (!terms) return ['Gratuit pendant le projet pilote.'];
+  if (!terms) return [t("Gratuit pendant le projet pilote.")];
   const later = {
-    per_contact: `${money(terms.per_contact_chf)} par mise en relation acceptée.`,
-    subscription: `inclus dans votre abonnement de ${money(terms.subscription_chf)} par mois (plus de ${terms.subscription_above} biens actifs).`,
-    owner_success: `aucun frais à la mise en relation ; ${money(terms.owner_success_chf)} uniquement si le bien est vendu grâce au réseau.`,
+    per_contact: t("{0} par mise en relation acceptée.", money(terms.per_contact_chf)),
+    subscription: t("inclus dans votre abonnement de {0} par mois (plus de {1} biens actifs).", money(terms.subscription_chf), terms.subscription_above),
+    owner_success: t("aucun frais à la mise en relation ; {0} uniquement si le bien est vendu grâce au réseau.", money(terms.owner_success_chf)),
   }[terms.rule];
   if (terms.pilot) {
-    return ['Gratuit pendant le projet pilote, jusqu\'au 31 décembre 2026.', `À partir du 1er janvier 2027 : ${later}`];
+    return [t("Gratuit pendant le projet pilote, jusqu'au 31 décembre 2026."), t("À partir du 1er janvier 2027 : {0}", later)];
   }
-  if (terms.rule === 'per_contact') return [`Cette mise en relation vous sera facturée ${money(terms.fee_chf)}.`];
+  if (terms.rule === 'per_contact') return [t("Cette mise en relation vous sera facturée {0}.", money(terms.fee_chf))];
   if (terms.rule === 'subscription') {
-    return [`Cette mise en relation est incluse dans votre abonnement de ${money(terms.subscription_chf)} par mois.`];
+    return [t("Cette mise en relation est incluse dans votre abonnement de {0} par mois.", money(terms.subscription_chf))];
   }
   return [
-    'Aucun frais pour cette mise en relation.',
-    `${money(terms.owner_success_chf)} seront dus uniquement si le bien est vendu grâce au réseau.`,
+    t("Aucun frais pour cette mise en relation."),
+    t("{0} seront dus uniquement si le bien est vendu grâce au réseau.", money(terms.owner_success_chf)),
   ];
 }
 
 function billingNote(r: ContactRequest): string | null {
   if (r.status !== 'accepted' || !r.billing_rule) return null;
-  if (r.billing_rule === 'pilot') return 'Gratuit (projet pilote)';
-  if (r.billing_rule === 'per_contact') return `Facturé ${money(r.fee_chf ?? 0)}`;
-  if (r.billing_rule === 'subscription') return 'Inclus dans votre abonnement';
-  return 'Aucun frais à la mise en relation';
+  if (r.billing_rule === 'pilot') return t("Gratuit (projet pilote)");
+  if (r.billing_rule === 'per_contact') return t("Facturé {0}", money(r.fee_chf ?? 0));
+  if (r.billing_rule === 'subscription') return t("Inclus dans votre abonnement");
+  return t("Aucun frais à la mise en relation");
 }
 
 function ConfirmDialog({
@@ -821,14 +822,14 @@ function ConfirmDialog({
           ))}
         </div>
         <p className="mt-3 text-xs text-slate-500">
-          Les coordonnées sont échangées dès que les deux parties ont accepté.
+          {t("Les coordonnées sont échangées dès que les deux parties ont accepté.")}
         </p>
         <div className="mt-5 flex justify-end gap-2">
           <button
             onClick={onCancel}
             className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
           >
-            Annuler
+            {t("Annuler")}
           </button>
           <button
             autoFocus
@@ -884,7 +885,7 @@ function SellerView() {
       setCopiedId(searchId);
       setTimeout(() => setCopiedId(null), 2500);
     } catch {
-      window.prompt('Copiez ce lien :', link);
+      window.prompt(t("Copiez ce lien :"), link);
     }
   }
 
@@ -897,7 +898,7 @@ function SellerView() {
       .from('properties')
       .update({ sold_at: sold ? new Date().toISOString() : null, is_active: !sold })
       .eq('id', propertyId);
-    if (err) setError(`La mise à jour n'a pas pu être enregistrée : ${err.message}`);
+    if (err) setError(t("La mise à jour n'a pas pu être enregistrée : {0}", err.message));
     setBusyId(null);
     await load();
   }
@@ -916,7 +917,7 @@ function SellerView() {
       // Conditions tarifaires : si la base ne les fournit pas encore, on affiche le texte du pilote
       getMyBillingTerms().then(setTerms).catch(() => setTerms(null));
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Erreur de chargement.');
+      setError(e instanceof Error ? e.message : t("Erreur de chargement."));
     } finally {
       setLoading(false);
     }
@@ -933,13 +934,13 @@ function SellerView() {
       await action();
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "L'action n'a pas abouti.");
+      setError(e instanceof Error ? e.message : t("L'action n'a pas abouti."));
     } finally {
       setBusyId(null);
     }
   }
 
-  if (loading) return <div className="py-20 text-center text-slate-500">Chargement...</div>;
+  if (loading) return <div className="py-20 text-center text-slate-500">{t("Chargement...")}</div>;
 
   const pending = requests.filter((r) => r.status === 'pending' && r.initiated_by === 'buyer').length;
 
@@ -965,13 +966,13 @@ function SellerView() {
               >
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 id="titre-apercu" className="text-sm font-semibold text-slate-200">
-                    Votre bien vu par un acheteur
+                    {t("Votre bien vu par un acheteur")}
                   </h3>
                   <button
                     onClick={() => setPreviewId(null)}
                     className="rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-800"
                   >
-                    Fermer
+                    {t("Fermer")}
                   </button>
                 </div>
                 <MatchCard
@@ -988,8 +989,7 @@ function SellerView() {
                   }}
                 />
                 <p className="mt-3 text-xs leading-relaxed text-slate-400">
-                  Seuls les acheteurs qualifiés dont la recherche correspond voient ce bien. Votre nom et vos
-                  coordonnées restent masqués jusqu'à la mise en relation.
+                  {t("Seuls les acheteurs qualifiés dont la recherche correspond voient ce bien. Votre nom et vos coordonnées restent masqués jusqu'à la mise en relation.")}
                 </p>
               </div>
             </div>
@@ -1000,15 +1000,15 @@ function SellerView() {
         <ConfirmDialog
           title={
             confirm.kind === 'accept'
-              ? `Accepter la mise en relation pour « ${confirm.title} » ?`
-              : `Proposer « ${confirm.title} » à cet acheteur ?`
+              ? t("Accepter la mise en relation pour « {0} » ?", confirm.title)
+              : t("Proposer « {0} » à cet acheteur ?", confirm.title)
           }
           lines={
             confirm.kind === 'accept'
               ? billingLines(terms)
-              : ["Si l'acheteur accepte, la mise en relation est établie.", ...billingLines(terms)]
+              : [t("Si l'acheteur accepte, la mise en relation est établie."), ...billingLines(terms)]
           }
-          confirmLabel={confirm.kind === 'accept' ? 'Confirmer et accepter' : 'Confirmer et proposer'}
+          confirmLabel={confirm.kind === 'accept' ? t("Confirmer et accepter") : t("Confirmer et proposer")}
           busy={busyId === confirm.id}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
@@ -1035,27 +1035,26 @@ function SellerView() {
           className="mt-0.5 h-5 w-5 rounded border-slate-500 bg-slate-800 text-cyan-500 focus:ring-cyan-500"
         />
         <span className="text-sm text-slate-200">
-          Je suis un professionnel de l'immobilier (régie, courtier)
+          {t("Je suis un professionnel de l'immobilier (régie, courtier)")}
           <span className="mt-0.5 block text-xs text-slate-400">
             {isPro
-              ? 'Vos biens sont présentés aux acheteurs avec la mention « Professionnel ». Votre nom reste masqué jusqu\'à la mise en relation.'
-              : 'Vos biens sont présentés aux acheteurs avec la mention « Propriétaire ».'}
+              ? t("Vos biens sont présentés aux acheteurs avec la mention « Professionnel ». Votre nom reste masqué jusqu'à la mise en relation.")
+              : t("Vos biens sont présentés aux acheteurs avec la mention « Propriétaire ».")}
           </span>
         </span>
       </label>
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-100">Mises en relation</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t("Mises en relation")}</h2>
         <p className="mb-4 text-sm text-slate-400">
           {pending > 0
-            ? `${pending} demande${pending > 1 ? 's' : ''} en attente de votre réponse.`
-            : 'Les coordonnées ne sont échangées que lorsque les deux parties sont d\'accord.'}
+            ? pending > 1 ? t("{0} demandes en attente de votre réponse.", pending) : t("{0} demande en attente de votre réponse.", pending)
+            : t("Les coordonnées ne sont échangées que lorsque les deux parties sont d'accord.")}
         </p>
 
         {requests.length === 0 ? (
           <EmptyBox icon={<Handshake className="h-10 w-10" />}>
-            Aucune mise en relation pour le moment. Proposez un de vos biens à un acheteur ci-dessous, ou attendez
-            qu'un acheteur qualifié en fasse la demande.
+            {t("Aucune mise en relation pour le moment. Proposez un de vos biens à un acheteur ci-dessous, ou attendez qu'un acheteur qualifié en fasse la demande.")}
           </EmptyBox>
         ) : (
           <ul className="space-y-3">
@@ -1065,21 +1064,21 @@ function SellerView() {
                   <div className="min-w-0">
                     <p className="font-semibold text-slate-100">{r.property_title}</p>
                     <p className="mt-1 text-sm text-slate-400">
-                      Acheteur <span className="text-slate-200">{r.buyer_pseudo || 'anonyme'}</span>
-                      {' · '}score acheteur {r.buyer_score}/100
-                      {' · '}matching {r.match_score}/100
-                      {r.has_pre_approval ? ' · pré-approbation bancaire déclarée' : ''}
+                      {t("Acheteur")}{' '}<span className="text-slate-200">{r.buyer_pseudo || t('anonyme')}</span>
+                      {' · '}{t("score acheteur")}{' '}{r.buyer_score}/100
+                      {' · '}{t("matching {0}/100", r.match_score)}
+                      {r.has_pre_approval ? t(" · pré-approbation bancaire déclarée") : ''}
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {r.initiated_by === 'seller' ? 'Proposée par vous le ' : 'Demande reçue le '}
-                      {new Date(r.created_at).toLocaleDateString('fr-CH')}
+                      {r.initiated_by === 'seller' ? t("Proposée par vous le ") : t("Demande reçue le ")}
+                      {new Date(r.created_at).toLocaleDateString(loc())}
                       {billingNote(r) ? ` · ${billingNote(r)}` : ''}
                     </p>
                   </div>
 
                   {r.status === 'pending' && r.initiated_by === 'seller' && (
                     <span className="flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1 text-xs text-amber-300">
-                      <Clock className="h-3.5 w-3.5" /> En attente de l'acheteur
+                      <Clock className="h-3.5 w-3.5" />{' '}{t("En attente de l'acheteur")}
                     </span>
                   )}
                   {r.status === 'pending' && r.initiated_by === 'buyer' && (
@@ -1089,24 +1088,24 @@ function SellerView() {
                         onClick={() => run(r.id, () => respondContactRequest(r.id, false))}
                         className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
                       >
-                        Décliner
+                        {t("Décliner")}
                       </button>
                       <button
                         disabled={busyId === r.id}
                         onClick={() => setConfirm({ kind: 'accept', id: r.id, title: r.property_title })}
                         className="rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
                       >
-                        Accepter
+                        {t("Accepter")}
                       </button>
                     </div>
                   )}
                   {r.status === 'declined' && (
-                    <span className="rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-400">Déclinée</span>
+                    <span className="rounded-full bg-slate-700 px-3 py-1 text-xs text-slate-400">{t("Déclinée")}</span>
                   )}
                 </div>
                 {r.contact && (
                   <div className="mt-3">
-                    <ContactCard contact={r.contact} label="Mise en relation acceptée : coordonnées de l'acheteur" />
+                    <ContactCard contact={r.contact} label={t("Mise en relation acceptée : coordonnées de l'acheteur")} />
                   </div>
                 )}
               </li>
@@ -1116,16 +1115,18 @@ function SellerView() {
       </section>
 
       <section>
-        <h2 className="text-lg font-semibold text-slate-100">Acheteurs en recherche</h2>
+        <h2 className="text-lg font-semibold text-slate-100">{t("Acheteurs en recherche")}</h2>
         <p className="mb-4 text-sm text-slate-400">
           {searches.length > 0
-            ? `${searches.length} acheteur${searches.length > 1 ? 's' : ''} qualifié${searches.length > 1 ? 's' : ''} recherche${searches.length > 1 ? 'nt' : ''} un bien en ce moment. Leur identité reste masquée jusqu'à la mise en relation.`
-            : 'Les recherches des acheteurs qualifiés apparaîtront ici.'}
+            ? searches.length > 1
+              ? t("{0} acheteurs qualifiés recherchent un bien en ce moment. Leur identité reste masquée jusqu'à la mise en relation.", searches.length)
+              : t("{0} acheteur qualifié recherche un bien en ce moment. Leur identité reste masquée jusqu'à la mise en relation.", searches.length)
+            : t("Les recherches des acheteurs qualifiés apparaîtront ici.")}
         </p>
 
         {searches.length === 0 ? (
           <EmptyBox icon={<Users className="h-10 w-10" />}>
-            Aucune recherche active pour le moment.
+            {t("Aucune recherche active pour le moment.")}
           </EmptyBox>
         ) : (
           <div className="grid gap-5 md:grid-cols-2">
@@ -1137,7 +1138,7 @@ function SellerView() {
                       onClick={() => navigate('/seller/new')}
                       className="flex w-full items-center justify-center gap-2 rounded-lg border border-cyan-600 py-2.5 text-sm font-semibold text-cyan-400 hover:bg-cyan-950"
                     >
-                      <Plus className="h-4 w-4" /> Ajouter un bien correspondant
+                      <Plus className="h-4 w-4" />{' '}{t("Ajouter un bien correspondant")}
                     </button>
                   ) : (
                     s.my_properties.map((mp) => (
@@ -1145,8 +1146,8 @@ function SellerView() {
                         <span className="min-w-0 text-sm">
                           <span className="block truncate text-slate-200">{mp.title}</span>
                           <span className="text-xs text-slate-500">
-                            Matching {mp.match_score}/100
-                            {mp.zone_match === false && <span className="text-amber-300"> · hors zone</span>}
+                            {t("Matching")}{' '}{mp.match_score}/100
+                            {mp.zone_match === false && <span className="text-amber-300">{' '}{t("· hors zone")}</span>}
                           </span>
                         </span>
                         {mp.request_status === null ? (
@@ -1163,15 +1164,15 @@ function SellerView() {
                             }
                             className="shrink-0 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-3 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
                           >
-                            Proposer ce bien
+                            {t("Proposer ce bien")}
                           </button>
                         ) : (
                           <span className="shrink-0 rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-400">
                             {mp.request_status === 'pending'
-                              ? 'En attente'
+                              ? t("En attente")
                               : mp.request_status === 'accepted'
-                                ? 'En relation'
-                                : 'Sans suite'}
+                                ? t("En relation")
+                                : t("Sans suite")}
                           </span>
                         )}
                       </div>
@@ -1182,7 +1183,7 @@ function SellerView() {
                     className="flex w-full items-center justify-center gap-2 py-1.5 text-xs text-slate-400 hover:text-cyan-400"
                   >
                     <Copy className="h-3.5 w-3.5" />
-                    {copiedId === s.id ? 'Lien copié' : 'Copier le lien à transférer à un propriétaire'}
+                    {copiedId === s.id ? t("Lien copié") : t("Copier le lien à transférer à un propriétaire")}
                   </button>
                 </div>
               </SearchCard>
@@ -1194,10 +1195,13 @@ function SellerView() {
       <section>
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-slate-100">Vos biens</h2>
+            <h2 className="text-lg font-semibold text-slate-100">{t("Vos biens")}</h2>
             <p className="text-sm text-slate-400">
-              {properties.length} bien{properties.length > 1 ? 's' : ''} enregistré{properties.length > 1 ? 's' : ''}.
-              Ils ne sont visibles que des acheteurs qualifiés dont la recherche correspond.
+              {(() => {
+                const n = properties.filter((x) => !x.property.sold_at).length;
+                return n > 1 ? t("{0} biens enregistrés.", n) : t("{0} bien enregistré.", n);
+              })()}{' '}
+              {t("Ils ne sont visibles que des acheteurs qualifiés dont la recherche correspond.")}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -1205,21 +1209,20 @@ function SellerView() {
               onClick={() => navigate('/seller/import')}
               className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400"
             >
-              <FileSpreadsheet className="h-4 w-4" /> Importer depuis Excel
+              <FileSpreadsheet className="h-4 w-4" />{' '}{t("Importer depuis Excel")}
             </button>
             <button
               onClick={() => navigate('/seller/new')}
               className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
             >
-              <Plus className="h-4 w-4" /> Ajouter un bien
+              <Plus className="h-4 w-4" />{' '}{t("Ajouter un bien")}
             </button>
           </div>
         </div>
 
         {properties.filter((x) => !x.property.sold_at).length === 0 ? (
           <EmptyBox icon={<Home className="h-10 w-10" />}>
-            Vous n'avez pas encore ajouté de bien. Ajoutez-en un pour voir combien d'acheteurs qualifiés
-            correspondent.
+            {t("Vous n'avez pas encore ajouté de bien. Ajoutez-en un pour voir combien d'acheteurs qualifiés correspondent.")}
           </EmptyBox>
         ) : (
           <ul className="space-y-3">
@@ -1233,41 +1236,41 @@ function SellerView() {
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-100">{p.title}</p>
                   <p className="mt-1 text-sm text-slate-400">
-                    {p.zone} · {PROPERTY_TYPE_LABELS[p.property_type]} · {p.surface_m2} m² · {chf(p.price)}
+                    {p.zone} · {PROPERTY_TYPE_LABELS[p.property_type]} · {p.surface_m2}{' '}{t("m² ·")}{' '}{chf(p.price)}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">
-                    Score vendeur {seller_score}/100 · {p.is_active ? 'Actif' : 'Retiré du réseau'}
-                    {p.client_ref && <> · Réf. {p.client_ref}</>}
+                    {t("Score vendeur")}{' '}{seller_score}/100 · {p.is_active ? t("Actif") : t("Retiré du réseau")}
+                    {p.client_ref && <>{' '}{t("· Réf.")}{' '}{p.client_ref}</>}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1.5 rounded-lg bg-slate-900 px-3 py-2 text-sm text-cyan-400">
                     <Users className="h-4 w-4" />
-                    {matching_buyers} acheteur{matching_buyers > 1 ? 's' : ''} qualifié{matching_buyers > 1 ? 's' : ''}
+                    {matching_buyers > 1 ? t("{0} acheteurs qualifiés", matching_buyers) : t("{0} acheteur qualifié", matching_buyers)}
                   </span>
                   {pending_requests > 0 && (
                     <span className="rounded-lg bg-amber-500/15 px-3 py-2 text-sm text-amber-300">
-                      {pending_requests} en attente
+                      {pending_requests}{' '}{t("en attente")}
                     </span>
                   )}
                   <button
                     onClick={() => navigate(`/seller/edit/${p.id}`)}
                     className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700"
                   >
-                    Modifier
+                    {t("Modifier")}
                   </button>
                   <button
                     onClick={() => setPreviewId(p.id)}
                     className="flex items-center gap-1.5 rounded-lg border border-cyan-700 px-3 py-2 text-sm text-cyan-400 hover:bg-cyan-950"
                   >
-                    <Eye className="h-4 w-4" /> Aperçu
+                    <Eye className="h-4 w-4" />{' '}{t("Aperçu")}
                   </button>
                   <button
                     disabled={busyId === p.id}
                     onClick={() => run(p.id, () => setPropertyActive(p.id, !p.is_active))}
                     className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:bg-slate-700 disabled:opacity-50"
                   >
-                    {p.is_active ? <><EyeOff className="h-4 w-4" /> Retirer</> : <><Eye className="h-4 w-4" /> Réactiver</>}
+                    {p.is_active ? <><EyeOff className="h-4 w-4" />{' '}{t("Retirer")}</> : <><Eye className="h-4 w-4" />{' '}{t("Réactiver")}</>}
                   </button>
                   {isPro && (
                     <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-2 text-sm text-slate-300 hover:border-emerald-500 hover:text-emerald-400">
@@ -1278,7 +1281,7 @@ function SellerView() {
                         onChange={() => setSold(p.id, true)}
                         className="h-4 w-4 rounded border-slate-500 bg-slate-800 text-emerald-500"
                       />
-                      Vendu
+                      {t("Vendu")}
                     </label>
                   )}
                 </div>
@@ -1290,7 +1293,7 @@ function SellerView() {
         {properties.some((x) => x.property.sold_at) && (
           <div className="mt-6">
             <HistorySection
-              title="Historique des ventes"
+              title={t("Historique des ventes")}
               rows={properties
                 .filter((x) => x.property.sold_at)
                 .sort((a, b) => String(b.property.sold_at).localeCompare(String(a.property.sold_at)))
@@ -1330,15 +1333,15 @@ function HistorySection({
         {rows.map((r) => (
           <li key={r.key} className="flex flex-wrap items-center gap-x-4 gap-y-1 py-2.5 text-sm">
             <span className="w-24 shrink-0 tabular-nums text-slate-500">
-              {new Date(r.date).toLocaleDateString('fr-CH')}
+              {new Date(r.date).toLocaleDateString(loc())}
             </span>
             <span className="min-w-0 flex-1">
               <span className="font-medium text-slate-100">{r.title}</span>
               <span className="text-slate-400"> · {r.detail}</span>
-              {r.reference && <span className="text-cyan-400"> · Réf. {r.reference}</span>}
+              {r.reference && <span className="text-cyan-400">{' '}{t("· Réf.")}{' '}{r.reference}</span>}
             </span>
             <button onClick={r.onUndo} className="text-xs text-slate-500 hover:text-cyan-400 hover:underline">
-              Annuler
+              {t("Annuler")}
             </button>
           </li>
         ))}
@@ -1351,15 +1354,20 @@ function HistorySection({
 // Vue démonstration (page /demo, sans connexion)
 // ============================================================
 function DemoView() {
-  const matches = useMemo(() => findMatchesForBuyer(DEMO_BUYER, DEMO_PROPERTIES), []);
+  // Titres et descriptions de démonstration dans la langue choisie
+  const demoProperties = useMemo(
+    () => DEMO_PROPERTIES.map((p) => ({ ...p, title: t(p.title), description: p.description ? t(p.description) : p.description })),
+    [],
+  );
+  const matches = useMemo(() => findMatchesForBuyer(DEMO_BUYER, demoProperties), [demoProperties]);
   return (
     <>
       <p className="rounded-xl border border-amber-700/50 bg-amber-950/40 px-4 py-3 text-sm text-amber-200">
-        Démonstration : le profil et les biens ci-dessous sont fictifs.
+        {t("Démonstration : le profil et les biens ci-dessous sont fictifs.")}
       </p>
       <BuyerScoreCard buyer={DEMO_BUYER} />
       <section>
-        <h2 className="mb-4 text-lg font-semibold text-slate-100">Exemple de matchs</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-100">{t("Exemple de matchs")}</h2>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {matches.map((m) => (
             <MatchCard
@@ -1437,15 +1445,15 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
   } else if (!user) {
     // Session ouverte mais fiche utilisateur introuvable : on n'affiche jamais de données fictives.
     content = (
-      <ErrorBox message="Votre compte n'a pas pu être chargé. Déconnectez-vous puis reconnectez-vous ; si le problème persiste, contactez-nous." />
+      <ErrorBox message={t("Votre compte n'a pas pu être chargé. Déconnectez-vous puis reconnectez-vous ; si le problème persiste, contactez-nous.")} />
     );
   } else {
     content = (
       <>
-        <div className="flex gap-2 border-b border-slate-800" role="tablist" aria-label="Mon espace">
+        <div className="flex gap-2 border-b border-slate-800" role="tablist" aria-label={t("Mon espace")}>
           {([
-            ['buy', "J'achète"],
-            ['sell', 'Je vends'],
+            ['buy', t("J'achète")],
+            ['sell', t('Je vends')],
           ] as const).map(([value, label]) => (
             <button
               key={value}
@@ -1475,12 +1483,13 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
             <Brand />
           </button>
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {demo ? (
               <button
                 onClick={() => navigate('/auth?mode=inscription')}
                 className="rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500"
               >
-                Demander mon accès
+                {t("Demander mon accès")}
               </button>
             ) : (
               <>
@@ -1494,7 +1503,7 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
                     onClick={() => navigate('/admin')}
                     className="rounded-lg bg-cyan-500/10 px-3 py-1.5 text-sm text-cyan-400 hover:bg-cyan-500/20"
                   >
-                    Suivi des ventes
+                    {t("Suivi des ventes")}
                   </button>
                 )}
                 {(user || session) && (
@@ -1502,7 +1511,7 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
                     onClick={handleSignOut}
                     className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-red-400"
                   >
-                    <LogOut className="h-4 w-4" /> Déconnexion
+                    <LogOut className="h-4 w-4" />{' '}{t("Déconnexion")}
                   </button>
                 )}
               </>
@@ -1514,7 +1523,7 @@ export default function Dashboard({ demo = false }: { demo?: boolean }) {
       <main className="mx-auto w-full max-w-6xl flex-1 space-y-8 px-6 py-8">{content}</main>
 
       <footer className="border-t border-slate-800 bg-slate-900 py-4 text-center text-xs text-slate-500">
-        {BRAND_NAME} · Réseau immobilier off-market · <a href="/confidentialite" className="hover:text-cyan-400 hover:underline">Confidentialité</a>
+        {BRAND_NAME}{' '}{t("· Réseau immobilier off-market ·")}{' '}<a href="/confidentialite" className="hover:text-cyan-400 hover:underline">{t("Confidentialité")}</a>
       </footer>
     </div>
   );

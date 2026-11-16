@@ -1,3 +1,22 @@
+import { t } from '../i18n';
+
+/**
+ * Table de libellés traduite à la lecture : la clé (enregistrée dans la base) ne change pas,
+ * le libellé suit la langue choisie.
+ */
+function translated<K extends string>(map: Record<K, string>): Record<K, string> {
+  const out = {} as Record<K, string>;
+  for (const k of Object.keys(map) as K[]) {
+    Object.defineProperty(out, k, { get: () => t(map[k]), enumerable: true });
+  }
+  Object.defineProperty(out, '__fr', { value: map, enumerable: false });
+  return out;
+}
+
+/** Libellés français d'origine d'une table traduite (clés des traductions) */
+export const frLabels = <K extends string>(map: Record<K, string>): Record<K, string> =>
+  ((map as unknown as { __fr?: Record<K, string> }).__fr ?? map);
+
 // === Types pour le réseau immobilier off-market ===
 
 export type UserRole = 'buyer' | 'seller' | 'admin';
@@ -79,30 +98,30 @@ export type SituationType = 'hyper_centre' | 'peripherie_urbaine' | 'banlieue_pr
 export type HouseType = 'individuelle' | 'jumelee' | 'contigue' | 'maitre' | 'autre';
 export type CommercialType = 'bureau' | 'commerce' | 'atelier' | 'depot' | 'restaurant' | 'autre';
 
-export const SITUATION_LABELS: Record<SituationType, string> = {
+export const SITUATION_LABELS: Record<SituationType, string> = translated({
   hyper_centre: 'Bien Hyper-Centré',
   peripherie_urbaine: 'Périphérie Urbaine',
   banlieue_proche: 'Banlieue Proche',
   village: 'Le Village',
   zone_rurbaine: 'Zone Rurbaine',
-};
+});
 
-export const HOUSE_TYPE_LABELS: Record<HouseType, string> = {
+export const HOUSE_TYPE_LABELS: Record<HouseType, string> = translated({
   individuelle: 'Individuelle',
   jumelee: 'Jumelée',
   contigue: 'Contiguë',
   maitre: 'Maison de Maître',
   autre: 'Autre',
-};
+});
 
-export const COMMERCIAL_TYPE_LABELS: Record<CommercialType, string> = {
+export const COMMERCIAL_TYPE_LABELS: Record<CommercialType, string> = translated({
   bureau: 'Bureau',
   commerce: 'Commerce',
   atelier: 'Atelier',
   depot: 'Dépôt',
   restaurant: 'Restaurant',
   autre: 'Autre',
-};
+});
 
 export interface Property {
   id: string;
@@ -162,8 +181,13 @@ export const FLOOR_OPTIONS = [
   { value: 'rez_inf', label: 'Rez inférieur' },
   { value: 'rdc', label: 'Rez-de-chaussée' },
   { value: 'rez_sup', label: 'Rez supérieur' },
-  ...Array.from({ length: 18 }, (_, i) => ({ value: String(i + 1), label: `${i + 1}${i === 0 ? 'er' : 'e'} étage` })),
+  ...Array.from({ length: 18 }, (_, i) => ({ value: String(i + 1), label: i === 0 ? '1er étage' : `${i + 1}e étage` })),
 ];
+/** Libellé d'étage dans la langue choisie */
+export const floorLabel = (label: string) => {
+  const n = label.match(/^(\d+)(er|e) étage$/);
+  return n ? t('{0}e étage', n[1]) : t(label);
+};
 
 export const EXTERIOR_OPTIONS = [
   'Balcon',
@@ -198,7 +222,7 @@ export const BONUS_OPTIONS = [
 
 // === Labels pour l'affichage ===
 
-export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
+export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = translated({
   apartment: 'Appartement',
   apartment_ppe: 'Appartement en PPE',
   house: 'Maison',
@@ -209,7 +233,7 @@ export const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   // Clé conservée telle quelle : elle est déjà enregistrée dans la base
   investment_building: 'Immeuble de rendement habitation',
   investment_mixed: 'Immeuble de rendement mixte',
-};
+});
 
 // Conservé pour rétro-compatibilité, mais préférer VAUD_COMMUNES
 export const ZONE_OPTIONS = [

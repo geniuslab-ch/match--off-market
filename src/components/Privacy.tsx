@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Brand, { BRAND_NAME, DISPLAY_FONT } from './Brand';
 
+import { loc, t, LanguageSwitcher } from '../i18n';
 // ============================================================
 // Déclaration de confidentialité (nLPD, Suisse)
 // Fichier : src/components/Privacy.tsx — page /confidentialite
@@ -10,7 +11,8 @@ import Brand, { BRAND_NAME, DISPLAY_FONT } from './Brand';
 // Les éléments entre crochets [ ... ] sont à compléter avant la mise en service.
 // Texte à faire relire par un juriste.
 
-const LAST_UPDATE = '12 novembre 2026';
+// Date de la dernière mise à jour, affichée au format de la langue choisie
+const LAST_UPDATE = new Date('2026-11-13T12:00:00Z');
 
 function Section({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
@@ -34,234 +36,195 @@ export default function Privacy() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <header className="mx-auto flex max-w-3xl items-center justify-between px-6 py-5">
-        <button onClick={() => navigate('/')} aria-label={`${BRAND_NAME}, retour à l'accueil`}>
+        <button onClick={() => navigate('/')} aria-label={t("{0}, retour à l'accueil", BRAND_NAME)}>
           <Brand />
         </button>
         <button
           onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))}
           className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400"
         >
-          <ArrowLeft className="h-4 w-4" /> Retour
+          <ArrowLeft className="h-4 w-4" />{' '}{t("Retour")}
         </button>
       </header>
+      <div className="mx-auto -mt-2 flex max-w-3xl justify-end px-6">
+        <LanguageSwitcher />
+      </div>
 
       <main className="mx-auto max-w-3xl space-y-8 px-6 pb-20">
         <div>
           <h1 className="text-4xl font-medium text-white" style={DISPLAY_FONT}>
-            Déclaration de confidentialité
+            {t("Déclaration de confidentialité")}
           </h1>
-          <p className="mt-3 text-sm text-slate-400">Dernière mise à jour : {LAST_UPDATE}</p>
+          <p className="mt-3 text-sm text-slate-400">{t("Dernière mise à jour :")}{' '}{LAST_UPDATE.toLocaleDateString(loc(), { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           <p className="mt-6 text-[15px] leading-relaxed text-slate-300">
-            Offly est un réseau immobilier off-market : la discrétion est au cœur du service. Cette déclaration
-            explique quelles données nous traitons, pourquoi, avec qui elles sont partagées et quels sont vos droits.
-            Elle s'appuie sur la loi fédérale sur la protection des données (nLPD).
+            {t("Offly est un réseau immobilier off-market : la discrétion est au cœur du service. Cette déclaration explique quelles données nous traitons, pourquoi, avec qui elles sont partagées et quels sont vos droits. Elle s'appuie sur la loi fédérale sur la protection des données (nLPD).")}
           </p>
         </div>
 
-        <Section n={1} title="Responsable du traitement">
+        <Section n={1} title={t("Responsable du traitement")}>
           <p>
-            [Raison sociale de l'entreprise exploitant Offly]
+            {t("[Raison sociale de l'entreprise exploitant Offly]")}
             <br />
-            [Adresse postale complète]
+            {t("[Adresse postale complète]")}
             <br />
-            Contact pour toute question sur vos données : [adresse e-mail dédiée, p. ex. confidentialite@offly.ch]
+            {t("Contact pour toute question sur vos données : [adresse e-mail dédiée, p. ex. confidentialite@offly.ch]")}
           </p>
         </Section>
 
-        <Section n={2} title="Les données que nous traitons">
+        <Section n={2} title={t("Les données que nous traitons")}>
           <p>
-            <strong className="text-slate-100">Votre compte</strong> : nom, pseudo, adresse e-mail, numéro de
-            téléphone et mot de passe. Le mot de passe est enregistré sous forme chiffrée (hachée) : personne, pas même
-            nous, ne peut le lire.
+            <strong className="text-slate-100">{t("Votre compte")}</strong>{' '}{t(": nom, pseudo, adresse e-mail, numéro de téléphone et mot de passe. Le mot de passe est enregistré sous forme chiffrée (hachée) : personne, pas même nous, ne peut le lire.")}
           </p>
           <p>
-            <strong className="text-slate-100">Si vous cherchez un bien</strong> : vos critères de recherche (localité
-            ou canton, type de bien, surface, budget maximum), le montant de votre apport, votre taux d'endettement et
-            le fait que vous disposiez ou non d'une pré-approbation bancaire. Le dépôt du document de pré-approbation
-            est facultatif.
+            <strong className="text-slate-100">{t("Si vous cherchez un bien")}</strong>{' '}{t(": vos critères de recherche (localité ou canton, type de bien, surface, budget maximum), le montant de votre apport, votre taux d'endettement et le fait que vous disposiez ou non d'une pré-approbation bancaire. Le dépôt du document de pré-approbation est facultatif.")}
           </p>
           <p>
-            <strong className="text-slate-100">Si vous vendez un bien</strong> : la description du bien (localité,
-            type, prix, surface, caractéristiques) et les informations qui servent au matching (délai de vente
-            souhaité, ancienneté de la mise en vente, conditions de vente, rareté). Si vous l'indiquez, le fait que
-            vous soyez un professionnel de l'immobilier.
+            <strong className="text-slate-100">{t("Si vous vendez un bien")}</strong>{' '}{t(": la description du bien (localité, type, prix, surface, caractéristiques) et les informations qui servent au matching (délai de vente souhaité, ancienneté de la mise en vente, conditions de vente, rareté). Si vous l'indiquez, le fait que vous soyez un professionnel de l'immobilier.")}
           </p>
           <p>
-            <strong className="text-slate-100">Les mises en relation</strong> : les demandes et propositions échangées,
-            leur réponse, et, pour le suivi des ventes, la date et les notes de nos appels.
+            <strong className="text-slate-100">{t("Les mises en relation")}</strong>{' '}{t(": les demandes et propositions échangées, leur réponse, et, pour le suivi des ventes, la date et les notes de nos appels.")}
           </p>
           <p>
-            <strong className="text-slate-100">La facturation</strong> : les mises en relation acceptées et les
-            montants dus par les vendeurs.
+            <strong className="text-slate-100">{t("La facturation")}</strong>{' '}{t(": les mises en relation acceptées et les montants dus par les vendeurs.")}
           </p>
           <p>
-            <strong className="text-slate-100">Les données techniques</strong> : notre hébergeur enregistre, pour la
-            sécurité du service, des journaux de connexion (adresse IP, date, page demandée), conservés peu de temps.
+            <strong className="text-slate-100">{t("Les données techniques")}</strong>{' '}{t(": notre hébergeur enregistre, pour la sécurité du service, des journaux de connexion (adresse IP, date, page demandée), conservés peu de temps.")}
           </p>
         </Section>
 
-        <Section n={3} title="Pourquoi nous les utilisons">
+        <Section n={3} title={t("Pourquoi nous les utilisons")}>
           <Ul>
-            <li>Créer et sécuriser votre compte.</li>
-            <li>Calculer les correspondances entre les recherches des acheteurs et les biens des vendeurs.</li>
-            <li>Organiser les mises en relation, uniquement avec l'accord des deux parties.</li>
-            <li>Vous appeler pour savoir si une mise en relation a abouti à une vente.</li>
-            <li>Établir les factures des vendeurs et respecter nos obligations comptables.</li>
-            <li>Protéger le service contre les abus.</li>
+            <li>{t("Créer et sécuriser votre compte.")}</li>
+            <li>{t("Calculer les correspondances entre les recherches des acheteurs et les biens des vendeurs.")}</li>
+            <li>{t("Organiser les mises en relation, uniquement avec l'accord des deux parties.")}</li>
+            <li>{t("Vous appeler pour savoir si une mise en relation a abouti à une vente.")}</li>
+            <li>{t("Établir les factures des vendeurs et respecter nos obligations comptables.")}</li>
+            <li>{t("Protéger le service contre les abus.")}</li>
           </Ul>
           <p>
-            Nous n'utilisons pas vos données à des fins publicitaires, nous ne les vendons pas et nous ne les louons
-            à personne.
+            {t("Nous n'utilisons pas vos données à des fins publicitaires, nous ne les vendons pas et nous ne les louons à personne.")}
           </p>
         </Section>
 
-        <Section n={4} title="Le score automatique et votre droit à un examen humain">
+        <Section n={4} title={t("Le score automatique et votre droit à un examen humain")}>
           <p>
-            Offly calcule automatiquement un score pour chaque recherche d'acheteur (budget, apport, pré-approbation,
-            endettement) et pour chaque bien. Un acheteur dont le score est inférieur à 80 sur 100 n'a pas accès aux
-            biens.
+            {t("Offly calcule automatiquement un score pour chaque recherche d'acheteur (budget, apport, pré-approbation, endettement) et pour chaque bien. Un acheteur dont le score est inférieur à 80 sur 100 n'a pas accès aux biens.")}
           </p>
           <p>
-            Si vous estimez que ce résultat ne reflète pas votre situation, vous pouvez nous écrire : une personne
-            examinera votre profil et vous pourrez faire valoir votre point de vue.
+            {t("Si vous estimez que ce résultat ne reflète pas votre situation, vous pouvez nous écrire : une personne examinera votre profil et vous pourrez faire valoir votre point de vue.")}
           </p>
         </Section>
 
-        <Section n={5} title="Qui voit quoi">
+        <Section n={5} title={t("Qui voit quoi")}>
           <p>
-            <strong className="text-slate-100">Votre identité reste masquée jusqu'à la mise en relation.</strong>{' '}
-            Votre nom, votre e-mail et votre téléphone ne sont transmis à l'autre partie que lorsque vous avez tous
-            les deux accepté la mise en relation.
+            <strong className="text-slate-100">{t("Votre identité reste masquée jusqu'à la mise en relation.")}</strong>{' '}
+            {t("Votre nom, votre e-mail et votre téléphone ne sont transmis à l'autre partie que lorsque vous avez tous les deux accepté la mise en relation.")}
           </p>
           <Ul>
             <li>
-              Un bien n'est montré qu'aux acheteurs qualifiés dont la recherche correspond, sans le nom ni les
-              coordonnées du vendeur. Seule la mention « Propriétaire » ou « Professionnel » est visible.
+              {t("Un bien n'est montré qu'aux acheteurs qualifiés dont la recherche correspond, sans le nom ni les coordonnées du vendeur. Seule la mention « Propriétaire » ou « Professionnel » est visible.")}
             </li>
             <li>
-              Si vous l'acceptez (option activée par défaut, modifiable à tout moment dans votre profil), votre
-              recherche est visible des vendeurs et sur une page publique, sous forme anonyme : localité, type de bien,
-              surface, nombre de pièces, budget arrondi aux 50 000 CHF supérieurs et mention d'une pré-approbation déclarée. Votre
-              apport, votre endettement et votre identité n'y figurent jamais.
+              {t("Si vous l'acceptez (option activée par défaut, modifiable à tout moment dans votre profil), votre recherche est visible des vendeurs et sur une page publique, sous forme anonyme : localité, type de bien, surface, nombre de pièces, budget arrondi aux 50 000 CHF supérieurs et mention d'une pré-approbation déclarée. Votre apport, votre endettement et votre identité n'y figurent jamais.")}
             </li>
-            <li>Les vendeurs voient le pseudo et le score des acheteurs qui leur adressent une demande.</li>
+            <li>{t("Les vendeurs voient le pseudo et le score des acheteurs qui leur adressent une demande.")}</li>
             <li>
-              Votre document de pré-approbation n'est jamais montré aux autres utilisateurs. Seuls vous et
-              l'administration d'Offly pouvez l'ouvrir, pour vérifier votre dossier.
+              {t("Votre document de pré-approbation n'est jamais montré aux autres utilisateurs. Seuls vous et l'administration d'Offly pouvez l'ouvrir, pour vérifier votre dossier.")}
             </li>
           </Ul>
         </Section>
 
-        <Section n={6} title="Nos prestataires">
+        <Section n={6} title={t("Nos prestataires")}>
           <p>
-            Nous faisons appel à des prestataires qui traitent des données pour notre compte, uniquement selon nos
-            instructions :
+            {t("Nous faisons appel à des prestataires qui traitent des données pour notre compte, uniquement selon nos instructions :")}
           </p>
           <Ul>
             <li>
-              <strong className="text-slate-100">Supabase</strong> : base de données, comptes et stockage des
-              documents. Région d'hébergement : [région choisie pour le projet Supabase, p. ex. Francfort (UE)].
+              <strong className="text-slate-100">{t("Supabase")}</strong>{' '}{t(": base de données, comptes et stockage des documents. Région d'hébergement : [région choisie pour le projet Supabase, p. ex. Francfort (UE)].")}
             </li>
             <li>
-              <strong className="text-slate-100">Vercel</strong> : hébergement et diffusion du site.
+              <strong className="text-slate-100">{t("Vercel")}</strong>{' '}{t(": hébergement et diffusion du site.")}
             </li>
             <li>
-              <strong className="text-slate-100">bexio</strong> (Suisse) : facturation des vendeurs.
+              <strong className="text-slate-100">bexio</strong>{' '}{t("(Suisse) : facturation des vendeurs.")}
             </li>
           </Ul>
           <p>
-            Certains de ces prestataires sont établis ou disposent d'infrastructures hors de Suisse, notamment dans
-            l'Union européenne et aux États-Unis. Ces transferts ont lieu vers des pays reconnus par le Conseil
-            fédéral comme offrant une protection adéquate, ou sont encadrés par des garanties appropriées (clauses
-            contractuelles types reconnues par le Préposé fédéral, ou certification au Swiss-U.S. Data Privacy
-            Framework).
+            {t("Certains de ces prestataires sont établis ou disposent d'infrastructures hors de Suisse, notamment dans l'Union européenne et aux États-Unis. Ces transferts ont lieu vers des pays reconnus par le Conseil fédéral comme offrant une protection adéquate, ou sont encadrés par des garanties appropriées (clauses contractuelles types reconnues par le Préposé fédéral, ou certification au Swiss-U.S. Data Privacy Framework).")}
           </p>
           <p>
-            Le site n'utilise aucun outil de mesure d'audience ni de publicité, et ses polices de caractères sont
-            hébergées sur nos propres serveurs : aucune donnée n'est transmise à Google ou à un réseau publicitaire
-            lorsque vous le consultez.
+            {t("Le site n'utilise aucun outil de mesure d'audience ni de publicité, et ses polices de caractères sont hébergées sur nos propres serveurs : aucune donnée n'est transmise à Google ou à un réseau publicitaire lorsque vous le consultez.")}
           </p>
         </Section>
 
-        <Section n={7} title="Sécurité">
+        <Section n={7} title={t("Sécurité")}>
           <Ul>
-            <li>Toutes les communications avec le site sont chiffrées (HTTPS).</li>
+            <li>{t("Toutes les communications avec le site sont chiffrées (HTTPS).")}</li>
             <li>
-              Chaque utilisateur n'accède qu'à ses propres données : ces règles sont appliquées directement par la
-              base de données, et non par le seul affichage du site.
+              {t("Chaque utilisateur n'accède qu'à ses propres données : ces règles sont appliquées directement par la base de données, et non par le seul affichage du site.")}
             </li>
             <li>
-              Les documents de pré-approbation sont conservés dans un espace privé, sans lien public, et ne sont
-              accessibles qu'à leur titulaire et à l'administration.
+              {t("Les documents de pré-approbation sont conservés dans un espace privé, sans lien public, et ne sont accessibles qu'à leur titulaire et à l'administration.")}
             </li>
-            <li>Les mots de passe ne sont jamais conservés en clair.</li>
-            <li>L'accès administrateur est limité aux personnes qui en ont besoin pour le service.</li>
+            <li>{t("Les mots de passe ne sont jamais conservés en clair.")}</li>
+            <li>{t("L'accès administrateur est limité aux personnes qui en ont besoin pour le service.")}</li>
           </Ul>
           <p>
-            Aucun système n'est infaillible. En cas de violation de la sécurité présentant un risque élevé pour vous,
-            nous en informerons le Préposé fédéral et, si nécessaire, les personnes concernées.
+            {t("Aucun système n'est infaillible. En cas de violation de la sécurité présentant un risque élevé pour vous, nous en informerons le Préposé fédéral et, si nécessaire, les personnes concernées.")}
           </p>
         </Section>
 
-        <Section n={8} title="Durée de conservation">
+        <Section n={8} title={t("Durée de conservation")}>
           <Ul>
-            <li>Votre compte, vos recherches et vos biens : tant que votre compte est actif.</li>
+            <li>{t("Votre compte, vos recherches et vos biens : tant que votre compte est actif.")}</li>
             <li>
-              Le document de pré-approbation : jusqu'à la fin de votre recherche ou à votre demande de suppression.
+              {t("Le document de pré-approbation : jusqu'à la fin de votre recherche ou à votre demande de suppression.")}
             </li>
-            <li>Les notes de suivi des ventes : jusqu'à la clôture du dossier.</li>
+            <li>{t("Les notes de suivi des ventes : jusqu'à la clôture du dossier.")}</li>
             <li>
-              Les données de facturation : dix ans, comme l'exige le droit suisse pour les pièces comptables (art.
-              958f CO).
+              {t("Les données de facturation : dix ans, comme l'exige le droit suisse pour les pièces comptables (art. 958f CO).")}
             </li>
           </Ul>
           <p>
-            À la suppression de votre compte, vos données sont effacées, à l'exception de celles que la loi nous
-            oblige à conserver.
+            {t("À la suppression de votre compte, vos données sont effacées, à l'exception de celles que la loi nous oblige à conserver.")}
           </p>
         </Section>
 
-        <Section n={9} title="Stockage dans votre navigateur">
+        <Section n={9} title={t("Stockage dans votre navigateur")}>
           <p>
-            Le site enregistre dans votre navigateur uniquement ce qui est nécessaire à son fonctionnement : votre
-            session de connexion et le dernier onglet ouvert (« J'achète » ou « Je vends »). Aucun cookie publicitaire
-            ni de suivi n'est utilisé.
+            {t("Le site enregistre dans votre navigateur uniquement ce qui est nécessaire à son fonctionnement : votre session de connexion, le dernier onglet ouvert (« J'achète » ou « Je vends ») et votre langue. Aucun cookie publicitaire ni de suivi n'est utilisé.")}
           </p>
         </Section>
 
-        <Section n={10} title="Vos droits">
-          <p>Vous pouvez à tout moment :</p>
+        <Section n={10} title={t("Vos droits")}>
+          <p>{t("Vous pouvez à tout moment :")}</p>
           <Ul>
-            <li>savoir quelles données nous détenons sur vous et en recevoir une copie ;</li>
-            <li>les faire corriger si elles sont inexactes ;</li>
-            <li>en demander la suppression ;</li>
-            <li>vous opposer à un traitement ou retirer votre consentement, par exemple à la visibilité de votre recherche ;</li>
-            <li>recevoir vos données dans un format courant, ou les faire transmettre à un autre prestataire.</li>
+            <li>{t("savoir quelles données nous détenons sur vous et en recevoir une copie ;")}</li>
+            <li>{t("les faire corriger si elles sont inexactes ;")}</li>
+            <li>{t("en demander la suppression ;")}</li>
+            <li>{t("vous opposer à un traitement ou retirer votre consentement, par exemple à la visibilité de votre recherche ;")}</li>
+            <li>{t("recevoir vos données dans un format courant, ou les faire transmettre à un autre prestataire.")}</li>
           </Ul>
           <p>
-            Écrivez-nous à [adresse e-mail dédiée]. Nous répondons dans un délai de 30 jours. Si vous estimez que vos
-            droits ne sont pas respectés, vous pouvez vous adresser au Préposé fédéral à la protection des données et
-            à la transparence (PFPDT), www.edoeb.admin.ch.
+            {t("Écrivez-nous à [adresse e-mail dédiée]. Nous répondons dans un délai de 30 jours. Si vous estimez que vos droits ne sont pas respectés, vous pouvez vous adresser au Préposé fédéral à la protection des données et à la transparence (PFPDT), www.edoeb.admin.ch.")}
           </p>
         </Section>
 
-        <Section n={11} title="Si vous déposez les données d'une autre personne">
+        <Section n={11} title={t("Si vous déposez les données d'une autre personne")}>
           <p>
-            Si vous saisissez la recherche ou le document d'un client ou d'un proche, vous devez avoir obtenu son
-            accord au préalable et l'avoir informé de cette déclaration.
+            {t("Si vous saisissez la recherche ou le document d'un client ou d'un proche, vous devez avoir obtenu son accord au préalable et l'avoir informé de cette déclaration.")}
           </p>
         </Section>
 
-        <Section n={12} title="Modifications">
+        <Section n={12} title={t("Modifications")}>
           <p>
-            Nous pouvons adapter cette déclaration, par exemple lors de l'ajout d'un service. La version publiée sur
-            cette page fait foi ; en cas de changement important, nous vous en informerons par e-mail.
+            {t("Nous pouvons adapter cette déclaration, par exemple lors de l'ajout d'un service. La version publiée sur cette page fait foi ; en cas de changement important, nous vous en informerons par e-mail.")}
           </p>
         </Section>
       </main>
 
       <footer className="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        {BRAND_NAME} · Déclaration de confidentialité
+        {BRAND_NAME}{' '}{t("· Déclaration de confidentialité")}
       </footer>
     </div>
   );

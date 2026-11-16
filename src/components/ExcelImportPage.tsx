@@ -6,6 +6,7 @@ import { downloadTemplate } from '../utils/excel';
 import type { ImportedRow, TemplateSpec } from '../utils/excel';
 import Brand from './Brand';
 
+import { t, LanguageSwitcher } from '../i18n';
 export interface PreviewColumn {
   label: string;
   /** Valeur affichée pour une ligne valide (payload) ou à corriger (valeurs brutes) */
@@ -59,7 +60,7 @@ export default function ExcelImportPage({
     try {
       await downloadTemplate(template);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Le modèle n'a pas pu être créé.");
+      setError(e instanceof Error ? e.message : t("Le modèle n'a pas pu être créé."));
     } finally {
       setBusy(null);
     }
@@ -74,10 +75,10 @@ export default function ExcelImportPage({
     setBusy('read');
     try {
       const parsed = await parse(file);
-      if (parsed.length === 0) setError(`Aucune ligne remplie dans la feuille « ${template.sheet} ».`);
+      if (parsed.length === 0) setError(t("Aucune ligne remplie dans la feuille « {0} ».", template.sheet));
       setRows(parsed);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Le fichier n'a pas pu être lu.");
+      setError(e instanceof Error ? e.message : t("Le fichier n'a pas pu être lu."));
     } finally {
       setBusy(null);
       if (fileInput.current) fileInput.current.value = '';
@@ -93,7 +94,7 @@ export default function ExcelImportPage({
       setRows(null);
       setFileName(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur lors de l'import.");
+      setError(e instanceof Error ? e.message : t("Erreur lors de l'import."));
     } finally {
       setBusy(null);
     }
@@ -107,9 +108,12 @@ export default function ExcelImportPage({
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-sm text-slate-400 hover:text-cyan-400"
           >
-            <ArrowLeft className="h-4 w-4" /> Mon espace
+            <ArrowLeft className="h-4 w-4" />{' '}{t("Mon espace")}
           </button>
-          <Brand size="sm" />
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
+            <Brand size="sm" />
+          </div>
         </div>
       </header>
 
@@ -120,10 +124,9 @@ export default function ExcelImportPage({
         </div>
 
         <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">1 · Télécharger le modèle</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">{t("1 · Télécharger le modèle")}</h2>
           <p className="mt-2 text-sm leading-relaxed text-slate-400">
-            Le modèle contient les colonnes à remplir, des menus déroulants, un exemple et un mode d'emploi. Les
-            colonnes marquées d'un astérisque sont obligatoires.
+            {t("Le modèle contient les colonnes à remplir, des menus déroulants, un exemple et un mode d'emploi. Les colonnes marquées d'un astérisque sont obligatoires.")}
           </p>
           <div className="mt-3 flex flex-wrap gap-2 text-xs">
             {template.columns.map((c) => (
@@ -131,7 +134,7 @@ export default function ExcelImportPage({
                 key={c.key}
                 className={`rounded-full px-2.5 py-1 ${c.required ? 'bg-cyan-500/10 text-cyan-300' : 'bg-slate-900 text-slate-400'}`}
               >
-                {c.header}
+                {t(c.header)}
                 {c.required ? ' *' : ''}
               </span>
             ))}
@@ -142,14 +145,14 @@ export default function ExcelImportPage({
             className="mt-4 flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2.5 text-sm font-semibold text-slate-200 hover:border-cyan-500 hover:text-cyan-400 disabled:opacity-50"
           >
             {busy === 'template' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            Télécharger le modèle Excel
+            {t("Télécharger le modèle Excel")}
           </button>
         </section>
 
         <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">2 · Envoyer le fichier rempli</h2>
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">{t("2 · Envoyer le fichier rempli")}</h2>
           <p className="mt-2 text-sm text-slate-400">
-            Chaque ligne est vérifiée avant l'import : rien n'est enregistré tant que vous n'avez pas confirmé.
+            {t("Chaque ligne est vérifiée avant l'import : rien n'est enregistré tant que vous n'avez pas confirmé.")}
           </p>
           <input
             ref={fileInput}
@@ -164,7 +167,7 @@ export default function ExcelImportPage({
             className="mt-4 flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-500 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:from-cyan-400 hover:to-cyan-500 disabled:opacity-50"
           >
             {busy === 'read' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-            Choisir le fichier Excel
+            {t("Choisir le fichier Excel")}
           </button>
           {fileName && (
             <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
@@ -192,14 +195,13 @@ export default function ExcelImportPage({
 
         {rows && rows.length > 0 && (
           <section className="rounded-2xl border border-slate-700 bg-slate-800 p-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">3 · Vérifier et importer</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-cyan-400">{t("3 · Vérifier et importer")}</h2>
             <p className="mt-2 text-sm text-slate-300">
-              <span className="font-semibold text-emerald-400">{valid.length} prête{valid.length > 1 ? 's' : ''}</span>
+              <span className="font-semibold text-emerald-400">{valid.length > 1 ? t("{0} prêtes", valid.length) : t("{0} prête", valid.length)}</span>
               {invalid.length > 0 && (
                 <>
                   {' · '}
-                  <span className="font-semibold text-amber-300">{invalid.length} à corriger</span> (ces lignes ne
-                  seront pas importées)
+                  <span className="font-semibold text-amber-300">{t("{0} à corriger", invalid.length)}</span>{' '}{t("(ces lignes ne seront pas importées)")}
                 </>
               )}
             </p>
@@ -208,13 +210,13 @@ export default function ExcelImportPage({
               <table className="w-full min-w-[720px] text-left text-sm">
                 <thead className="bg-slate-900 text-xs uppercase tracking-wider text-slate-400">
                   <tr>
-                    <th className="px-3 py-2">Ligne</th>
+                    <th className="px-3 py-2">{t("Ligne")}</th>
                     {preview.map((c) => (
                       <th key={c.label} className={`px-3 py-2 ${c.right ? 'text-right' : ''}`}>
                         {c.label}
                       </th>
                     ))}
-                    <th className="px-3 py-2">État</th>
+                    <th className="px-3 py-2">{t("État")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-700">
@@ -231,7 +233,7 @@ export default function ExcelImportPage({
                       ))}
                       <td className="px-3 py-2">
                         {r.payload ? (
-                          <span className="text-emerald-400">Prête</span>
+                          <span className="text-emerald-400">{t("Prête")}</span>
                         ) : (
                           <span className="text-amber-300">{r.errors.join(' ; ')}</span>
                         )}
@@ -251,10 +253,10 @@ export default function ExcelImportPage({
             >
               {busy === 'import' ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Import en cours...
+                  <Loader2 className="h-4 w-4 animate-spin" />{' '}{t("Import en cours...")}
                 </>
               ) : (
-                `Importer ${n(valid.length)}`
+                t("Importer {0}", n(valid.length))
               )}
             </button>
           </section>

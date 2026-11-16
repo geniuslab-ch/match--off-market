@@ -2,6 +2,7 @@ import { Children, useCallback, useEffect, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent, ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
+import { t } from '../i18n';
 // ============================================================
 // Carrousel horizontal, sans bibliothèque
 // ============================================================
@@ -190,10 +191,10 @@ export default function Slider({
         <div className="min-w-0">{header}</div>
         {count > 1 && (
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <button type="button" className={arrow} onClick={() => page(-1)} disabled={atStart} aria-label="Précédent">
+            <button type="button" className={arrow} onClick={() => page(-1)} disabled={atStart} aria-label={t("Précédent")}>
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <button type="button" className={arrow} onClick={() => page(1)} disabled={atEnd} aria-label="Suivant">
+            <button type="button" className={arrow} onClick={() => page(1)} disabled={atEnd} aria-label={t("Suivant")}>
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
@@ -231,8 +232,8 @@ export default function Slider({
             <div
               key={i}
               role="group"
-              aria-roledescription="élément"
-              aria-label={`${i + 1} sur ${count}`}
+              aria-roledescription={t('élément')}
+              aria-label={t('{0} sur {1}', i + 1, count)}
               className="flex shrink-0 basis-[85%] snap-start sm:basis-[calc(50%-10px)] lg:basis-[calc((100%-40px)/3)] [&>*]:w-full"
             >
               {slide}
@@ -246,7 +247,7 @@ export default function Slider({
           <div
             className="h-1 flex-1 overflow-hidden rounded-full bg-slate-800"
             role="progressbar"
-            aria-label="Position dans le carrousel"
+            aria-label={t("Position dans le carrousel")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={Math.round(progress * 100)}
